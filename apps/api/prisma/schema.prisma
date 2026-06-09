@@ -1,4 +1,5 @@
 // schema.prisma
+// MIGRATION NEEDED: npx prisma migrate dev --name add-game-plan-table
 generator client {
   provider = "prisma-client-js"
 }
@@ -74,6 +75,7 @@ model Gym {
   classes       ClassSchedule[]
   subscription  Subscription?
   announcements Announcement[]
+  gamePlans     GamePlan[]
 
   @@index([slug])
 }
@@ -98,6 +100,7 @@ model User {
   techniqueLogs  TechniqueLog[]
   attendance     Attendance[]
   beltPromotions BeltPromotion[]
+  gamePlans      GamePlan[]
 
   @@index([gymId])
   @@index([gymId, isActive])
@@ -277,4 +280,18 @@ model Announcement {
 
   @@index([gymId])
   @@index([gymId, createdAt])
+}
+
+model GamePlan {
+  id        String   @id @default(cuid())
+  userId    String
+  gymId     String
+  positions Json     // { [positionName: string]: { id, title, beltLevel, notes, order }[] }
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  gym  Gym  @relation(fields: [gymId], references: [id])
+
+  @@unique([userId, gymId])
+  @@index([gymId])
 }

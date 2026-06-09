@@ -17,6 +17,7 @@ import { VideoModule } from './video/video.module';
 import { NotificationModule } from './notification/notification.module';
 import { AnnouncementModule } from './announcement/announcement.module';
 import { RedisModule } from './redis/redis.module';
+import { GamePlanModule } from './game-plan/game-plan.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { RedisModule } from './redis/redis.module';
     VideoModule,
     NotificationModule,
     AnnouncementModule,
+    GamePlanModule,
   ],
   controllers: [],
   providers: [

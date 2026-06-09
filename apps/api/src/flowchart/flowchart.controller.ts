@@ -2,7 +2,9 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Body,
+  Param,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -17,9 +19,15 @@ export class FlowchartController {
   constructor(private readonly flowchartService: FlowchartService) {}
 
   @Get('templates')
-  getTemplates(@Req() req: Request) {
+  listTemplates(@Req() req: Request) {
     const user = (req as any).user as AuthenticatedUser;
-    return this.flowchartService.getTemplates(user.gymId);
+    return this.flowchartService.listTemplates(user.gymId);
+  }
+
+  @Post(':id/clone')
+  cloneTemplate(@Param('id') id: string, @Req() req: Request) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.flowchartService.cloneTemplate(id, user.supabaseUid, user.gymId);
   }
 
   @Get('me')

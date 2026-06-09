@@ -37,6 +37,12 @@ export class UserController {
     return this.userService.findBySupabaseUid(user.supabaseUid, user.gymId);
   }
 
+  @Get('me/progress')
+  getProgressSummary(@Req() req: Request) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.userService.getProgressSummary(user.supabaseUid, user.gymId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request) {
     const user = (req as any).user as AuthenticatedUser;

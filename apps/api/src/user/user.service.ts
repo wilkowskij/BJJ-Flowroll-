@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { BeltLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { UpdateBeltDto } from './dto/update-belt.dto';
@@ -74,5 +75,151 @@ export class UserService {
     }
 
     return updatedUser;
+  }
+
+  async getProgressSummary(
+    supabaseUid: string,
+    gymId: string,
+  ): Promise<{
+    techniqueCount: number;
+    attendanceCount: number;
+    lastActive: Date | null;
+    streak: number;
+    beltLevel: string;
+    progressPercent: number;
+  }> {
+    const user = await this.prisma.user.findFirst({
+      where: { supabaseUid, gymId, deletedAt: null },
+    });
+    if (!user) throw new NotFoundException(`User not found`);
+
+    // Count distinct logged techniques
+    const techniqueLogRows = await this.prisma.techniqueLog.findMany({
+      where: { userId: user.id, gymId },
+      select: { techniqueId: true },
+      distinct: ['techniqueId'],
+    });
+    const techniqueCount = techniqueLogRows.length;
+
+    // Count attendance records
+    const attendanceCount = await this.prisma.attendance.count({
+      where: { userId: user.id, gymId },
+    });
+
+    // Last active: most recent attendance check-in
+    const lastAttendance = await this.prisma.attendance.findFirst({
+      where: { userId: user.id, gymId },
+      orderBy: { checkedInAt: 'desc' },
+      select: { checkedInAt: true },
+    });
+    const lastActive = lastAttendance?.checkedInAt ?? null;
+
+    // Streak: consecutive ISO weeks (ending now) with at least 1 attendance
+    const allAttendance = await this.prisma.attendance.findMany({
+      where: { userId: user.id, gymId },
+      select: { checkedInAt: true },
+      orderBy: { checkedInAt: 'desc' },
+    });
+
+    const streak = this.calculateWeeklyStreak(allAttendance.map((a) => a.checkedInAt));
+
+    // Belt level
+    const beltLevel = user.beltLevel;
+
+    // Progress percent from belt-track
+    const beltOrder: BeltLevel[] = ['white', 'blue', 'purple', 'brown', 'black'];
+    const currentIdx = beltOrder.indexOf(user.beltLevel);
+    const nextBelt: BeltLevel = beltOrder[currentIdx + 1] ?? 'black';
+
+    const track = await this.prisma.beltTrack.findUnique({
+      where: { gymId_beltLevel: { gymId, beltLevel: nextBelt } },
+    });
+
+    let progressPercent = 0;
+    if (track) {
+      const requiredTechIds = (track.requiredTechniqueIds as string[]) ?? [];
+      const requiredClasses = track.requiredClasses ?? 0;
+
+      const loggedTechIds = techniqueLogRows
+        .map((l) => l.techniqueId)
+        .filter((id): id is string => id !== null);
+
+      const techProgress =
+        requiredTechIds.length > 0
+          ? loggedTechIds.filter((id) => requiredTechIds.includes(id)).length /
+            requiredTechIds.length
+          : 1;
+
+      const classProgress =
+        requiredClasses > 0
+          ? Math.min(attendanceCount / requiredClasses, 1)
+          : 1;
+
+      progressPercent = Math.round(((techProgress + classProgress) / 2) * 100);
+    } else if (user.beltLevel === 'black') {
+      progressPercent = 100;
+    }
+
+    return {
+      techniqueCount,
+      attendanceCount,
+      lastActive,
+      streak,
+      beltLevel,
+      progressPercent,
+    };
+  }
+
+  private calculateWeeklyStreak(dates: Date[]): number {
+    if (dates.length === 0) return 0;
+
+    // Get unique ISO week keys (YYYY-WW)
+    const weekSet = new Set<string>();
+    for (const date of dates) {
+      weekSet.add(this.getISOWeekKey(date));
+    }
+
+    const now = new Date();
+    let streak = 0;
+    let currentWeek = this.getISOWeekKey(now);
+
+    while (weekSet.has(currentWeek)) {
+      streak++;
+      currentWeek = this.getPreviousWeekKey(currentWeek);
+    }
+
+    return streak;
+  }
+
+  private getISOWeekKey(date: Date): string {
+    const d = new Date(date);
+    d.setUTCHours(0, 0, 0, 0);
+    // Thursday in current week decides the year
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil(
+      ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
+    );
+    return `${d.getUTCFullYear()}-${String(weekNo).padStart(2, '0')}`;
+  }
+
+  private getPreviousWeekKey(weekKey: string): string {
+    const [yearStr, weekStr] = weekKey.split('-');
+    let year = parseInt(yearStr, 10);
+    let week = parseInt(weekStr, 10);
+
+    week--;
+    if (week === 0) {
+      year--;
+      // Weeks in previous year (52 or 53)
+      week = this.weeksInYear(year);
+    }
+
+    return `${year}-${String(week).padStart(2, '0')}`;
+  }
+
+  private weeksInYear(year: number): number {
+    const dec28 = new Date(Date.UTC(year, 11, 28));
+    return parseInt(this.getISOWeekKey(dec28).split('-')[1], 10);
   }
 }
