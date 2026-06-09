@@ -5,42 +5,41 @@
 
 ## 🔴 BLOCKING — Must complete before the app can run at all
 
-### 1. Create Supabase project
-**Why:** Auth, JWT, and the database all run on Supabase.
+### 1. ✅ Supabase project — DONE
+**Project URL:** `https://zqaxzgcvnmglvliyyrsp.supabase.co`
+URL + anon key pre-filled in all `.env.example` files.
 
-1. Go to https://supabase.com → New project
-2. Name it `flowmat-prod` (or `flowmat-dev` for dev first)
-3. Choose region: `us-east-1`
-4. Copy the values you'll need:
-   - **Project URL** → `VITE_SUPABASE_URL` (portal) + `EXPO_PUBLIC_SUPABASE_URL` (mobile)
-   - **Anon/public key** → `VITE_SUPABASE_ANON_KEY` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-   - **JWT Secret** (Settings → API → JWT Secret) → `SUPABASE_JWT_SECRET` (API)
-   - **Database password** → part of `DATABASE_URL`
+**Still needed (2 minutes):**
+1. Dashboard → **Settings → API → JWT Secret** → copy → add to `apps/api/.env` as `SUPABASE_JWT_SECRET`
+2. Dashboard → **Settings → Database → Connection string** (Transaction pooler, port 6543) → add to `apps/api/.env` as `DATABASE_URL`
 
-### 2. Deploy Supabase Auth Hook SQL
-**Why:** Without this, `gym_id` and `role` are NOT in JWT tokens — the entire multi-tenant system breaks.
+### 2. ✅ Auth Hook SQL — DEPLOYED
+`public.custom_jwt_claims` is live in the database.
 
-1. In Supabase Dashboard → SQL Editor
-2. Paste the SQL from `docs/SUPABASE_SETUP.md` (the `custom_jwt_claims` function)
-3. Run it
-4. Go to Authentication → Hooks
-5. Set **Customize access token** → `public.custom_jwt_claims`
+**One manual step — must do in Dashboard:**
+1. Go to **Authentication → Hooks**
+2. Enable **Customize access token (JWT claims)**
+3. Select function: `public.custom_jwt_claims`
 
-### 3. Run database migration locally
-**Why:** The `Announcement` table was added to the schema but not yet migrated.
+> Without this, `gym_id` and `role` are missing from JWTs and login fails.
+
+### 3. Run database migrations
+**Why:** Prisma schema has 12 models — none are in the DB yet.
 
 ```bash
 cd apps/api
 cp .env.example .env
-# fill in DATABASE_URL with your Supabase DB connection string
+# Add SUPABASE_JWT_SECRET and DATABASE_URL from steps above
 npm install
-npx prisma migrate dev --name add-announcement-table
+npx prisma migrate dev --name initial-schema
 npx prisma generate
+npx prisma db seed   # loads demo gym + 10 techniques
 ```
 
 ### 4. Set all environment variables
-Copy `apps/api/.env.example` → `apps/api/.env` and fill in every value.
-Copy `apps/portal/.env.example` → `apps/portal/.env.local`.
+`apps/api/.env` — copy from `.env.example`, fill in JWT Secret + DATABASE_URL (from step 1).
+`apps/portal/.env.local` — copy from `.env.example` (URL + anon key already filled in).
+`apps/mobile/.env` — copy from `.env.example` (URL + anon key already filled in).
 
 ---
 

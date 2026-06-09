@@ -10,10 +10,10 @@
 ## ⚠️ OWNER ACTIONS REQUIRED (Only you can do these)
 > Full instructions with links in `docs/OWNER_ACTIONS.md`
 
-- [ ] **[BLOCKING]** Create Supabase project → copy URL, Anon Key, JWT Secret
-- [ ] **[BLOCKING]** Deploy Auth Hook SQL in Supabase Dashboard (see `docs/SUPABASE_SETUP.md`)
-- [ ] **[BLOCKING]** Run `cd apps/api && npx prisma migrate dev --name add-announcement-table`
-- [ ] **[BLOCKING]** Fill in `apps/api/.env` and `apps/portal/.env.local` with real credentials
+- [x] **[BLOCKING]** Create Supabase project → `https://zqaxzgcvnmglvliyyrsp.supabase.co` — URL + anon key in all `.env.example` files
+- [x] **[BLOCKING]** Deploy Auth Hook SQL — `public.custom_jwt_claims` function deployed via MCP ✅  ⚠️ Still need: Dashboard → Authentication → Hooks → set "Customize access token" → `public.custom_jwt_claims`
+- [ ] **[BLOCKING]** Run `cd apps/api && npx prisma migrate dev` to sync all tables to Supabase
+- [ ] **[BLOCKING]** Fill in `apps/api/.env`: copy `.env.example`, add `SUPABASE_JWT_SECRET` from Dashboard → Settings → API → JWT Secret, add `DATABASE_URL` from Dashboard → Settings → Database → Connection string (Transaction pooler)
 - [ ] **[HIGH]** Create AWS account → S3 bucket `flowmat-videos` + IAM credentials
 - [ ] **[HIGH]** Create Mux account → get Token ID + Token Secret + Webhook Secret
 - [ ] **[HIGH]** Create Stripe account → get Secret Key + Webhook Secret + create 3 price products
