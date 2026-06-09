@@ -12,6 +12,15 @@ export type Position =
   | 'Takedown'
   | 'Submission';
 
+export type TechniquePosition =
+  | 'Guard'
+  | 'Guard Pass'
+  | 'Submissions'
+  | 'Sweeps'
+  | 'Takedowns'
+  | 'Back Takes'
+  | 'Mount';
+
 export interface Technique {
   id: string;
   gymId: string;
@@ -20,6 +29,7 @@ export interface Technique {
   beltLevel: string;
   type: string;
   difficulty: number;
+  description?: string;
   videoUrl?: string;
   muxPlaybackId?: string;
 }
@@ -42,14 +52,44 @@ export interface LogTechniquePayload {
   notes?: string;
 }
 
+export interface ClassSchedule {
+  id: string;
+  gymId: string;
+  title: string;
+  instructorName: string;
+  startTime: string;
+  endTime: string;
+  dayOfWeek: number;
+}
+
+export interface AttendanceCheckInPayload {
+  classId: string;
+  method: 'manual';
+}
+
 export const getTechniques = (params?: {
   position?: string;
   beltLevel?: string;
   query?: string;
+  gymId?: string;
 }) => apiClient.get<Technique[]>('/api/v1/techniques', { params });
+
+export const getVideos = (
+  gymId: string,
+  filters?: { position?: TechniquePosition; beltLevel?: BeltLevel },
+) =>
+  apiClient.get<Technique[]>('/api/v1/techniques', {
+    params: { gymId, ...filters },
+  });
 
 export const getTemplates = () =>
   apiClient.get<Technique[]>('/api/v1/techniques/templates');
+
+export const getSchedule = () =>
+  apiClient.get<ClassSchedule[]>('/api/v1/attendance/schedule');
+
+export const checkInToClass = (payload: AttendanceCheckInPayload) =>
+  apiClient.post<{ success: boolean }>('/api/v1/attendance', payload);
 
 export async function getMyLog(studentId: string): Promise<LogEntry[]> {
   const response = await apiClient.get<LogEntry[]>(
