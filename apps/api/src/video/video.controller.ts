@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -9,26 +10,26 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common';
-import { Request } from 'express';
-import { VideoService } from './video.service';
-import { AuthGuard, AuthenticatedUser } from '../auth/auth.guard';
-import { IsString, IsNotEmpty } from 'class-validator';
+} from '@nestjs/common'
+import { Request } from 'express'
+import { VideoService } from './video.service'
+import { AuthGuard, AuthenticatedUser } from '../auth/auth.guard'
+import { IsString, IsNotEmpty } from 'class-validator'
 
 class UploadUrlDto {
   @IsString()
   @IsNotEmpty()
-  fileName: string;
+  fileName: string
 
   @IsString()
   @IsNotEmpty()
-  contentType: string;
+  contentType: string
 }
 
 class ProcessVideoDto {
   @IsString()
   @IsNotEmpty()
-  s3Key: string;
+  s3Key: string
 }
 
 @Controller('api/v1/video')
@@ -38,12 +39,8 @@ export class VideoController {
   @Post('upload-url')
   @UseGuards(AuthGuard)
   getUploadUrl(@Body() body: UploadUrlDto, @Req() req: Request) {
-    const user = (req as any).user as AuthenticatedUser;
-    return this.videoService.getPresignedUploadUrl(
-      user.gymId,
-      body.fileName,
-      body.contentType,
-    );
+    const user = (req as any).user as AuthenticatedUser
+    return this.videoService.getPresignedUploadUrl(user.gymId, body.fileName, body.contentType)
   }
 
   @Post('mux-webhook')
@@ -52,7 +49,7 @@ export class VideoController {
     @Body() body: Record<string, unknown>,
     @Headers('mux-signature') signature: string,
   ) {
-    return this.videoService.handleMuxWebhook(body, signature);
+    return this.videoService.handleMuxWebhook(body, signature)
   }
 
   @Post('technique/:techniqueId/process')
@@ -62,8 +59,8 @@ export class VideoController {
     @Body() body: ProcessVideoDto,
     @Req() req: Request,
   ) {
-    const user = (req as any).user as AuthenticatedUser;
-    return this.videoService.createMuxUploadFromS3Key(user.gymId, body.s3Key, techniqueId);
+    const user = (req as any).user as AuthenticatedUser
+    return this.videoService.createMuxUploadFromS3Key(user.gymId, body.s3Key, techniqueId)
   }
 
   @Post('weekly-post/:postId/process')
@@ -73,21 +70,29 @@ export class VideoController {
     @Body() body: ProcessVideoDto,
     @Req() req: Request,
   ) {
-    const user = (req as any).user as AuthenticatedUser;
-    return this.videoService.createMuxUploadFromS3KeyForPost(user.gymId, body.s3Key, postId);
+    const user = (req as any).user as AuthenticatedUser
+    return this.videoService.createMuxUploadFromS3KeyForPost(user.gymId, body.s3Key, postId)
   }
 
   @Get('storage-usage')
   @UseGuards(AuthGuard)
   async getStorageUsage(@Req() req: Request) {
-    const user = (req as any).user as AuthenticatedUser;
-    const bytes = await this.videoService.getGymStorageUsage(user.gymId);
-    const gb = bytes / (1024 * 1024 * 1024);
+    const user = (req as any).user as AuthenticatedUser
+    const bytes = await this.videoService.getGymStorageUsage(user.gymId)
+    const gb = bytes / (1024 * 1024 * 1024)
     return {
       usedBytes: bytes,
       usedGb: Math.round(gb * 100) / 100,
       limitGb: 10,
       percentUsed: Math.round((gb / 10) * 100),
-    };
+    }
+  }
+
+  @Delete('technique/:techniqueId')
+  @UseGuards(AuthGuard)
+  async deleteVideo(@Param('techniqueId') techniqueId: string, @Req() req: Request) {
+    const user = (req as any).user as AuthenticatedUser
+    await this.videoService.deleteVideo(user.gymId, techniqueId)
+    return { deleted: true }
   }
 }
