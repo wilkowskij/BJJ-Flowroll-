@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { BeltLevel } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { NotificationService } from '../notification/notification.service'
+import { RedisService } from '../redis/redis.service'
 import { UpdateBeltDto } from './dto/update-belt.dto'
 import { NotificationPreferencesDto } from './dto/notification-preferences.dto'
 
@@ -21,6 +22,7 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
+    private readonly redis: RedisService,
   ) {}
 
   async findBySupabaseUid(supabaseUid: string, gymId: string) {
@@ -184,6 +186,11 @@ export class UserService {
   }
 
   async getStudentEngagement(gymId: string): Promise<StudentEngagementRow[]> {
+    const cacheKey = this.redis.gymKey(gymId, 'student_engagement')
+    return this.redis.getOrSet(cacheKey, 300, () => this.computeStudentEngagement(gymId))
+  }
+
+  private async computeStudentEngagement(gymId: string): Promise<StudentEngagementRow[]> {
     const students = await this.prisma.user.findMany({
       where: { gymId, isActive: true, deletedAt: null },
       include: {

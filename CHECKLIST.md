@@ -75,7 +75,7 @@
 - [x] Design `gym_id` scoping strategy across all database tables (all 10 Prisma models have gymId FK)
 - [x] Implement row-level security (RLS) in PostgreSQL for tenant isolation — applied via Supabase MCP, inline JWT extraction (no auth schema functions needed)
 - [x] Define auth middleware that enforces gym_id on every API request (apps/api/src/auth/auth.guard.ts)
-- [ ] Design tenant-aware caching strategy in Redis (key namespacing by gym_id)
+- [x] Design tenant-aware caching strategy in Redis (gym:{gymId}:{suffix} key namespace, getOrSet helper with graceful fallback, 5-min TTL on student engagement)
 - [ ] Document multi-tenancy model for all engineers before first sprint
 - [ ] Validate that no query path can leak data across tenants (security audit)
 
@@ -104,7 +104,7 @@
 - [x] Set up request validation (ValidationPipe globally wired in main.ts — whitelist, forbidNonWhitelisted, transform)
 - [x] Implement global error handling and standardized error responses (GlobalExceptionFilter in main.ts)
 - [x] Set up API rate limiting per gym_id — GymThrottlerGuard keys by gymId:path (falls back to IP)
-- [ ] Document API with OpenAPI/Swagger for dev handoff
+- [x] Document API with OpenAPI/Swagger for dev handoff (served at /api/docs via SwaggerModule)
 - [ ] Write integration tests for all core endpoints
 - [ ] Performance target: p95 API response < 200ms
 
@@ -222,12 +222,12 @@
 - [x] Class Schedule screen: week strip, day filter, class cards, manual check-in button
 - [x] QR Check-In screen: expo-camera scanner, flowmat://checkin token validation, success/error overlay
 - [x] Profile screen: belt visualization, stats card, logout
-- [ ] Onboarding flow: gym selection (Phase 1), account creation, first technique walkthrough
+- [x] Onboarding flow: gym selection via 6-char code, belt level setup, account creation (3-step animated flow)
 
 ### 2.6 Shared
 - [x] Design system / component library (Button, Card, Input, Modal, Badge, LoadingSpinner, EmptyState, BottomSheet)
 - [x] Implement brand theming injection (CSS custom properties in portal; ThemeContext in mobile)
-- [ ] Error boundary and crash reporting (Sentry or equivalent)
+- [~] Error boundary and crash reporting (ErrorBoundary.tsx in portal + MobileErrorBoundary in mobile — Sentry integration pending DSN from owner)
 - [x] Offline handling strategy (cache.ts TTL wrapper + OfflineBanner + cache-first loading in feed/log/flowchart tabs)
 
 ---
