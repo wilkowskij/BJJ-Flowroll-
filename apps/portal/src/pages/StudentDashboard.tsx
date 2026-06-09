@@ -1,37 +1,44 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { UsersIcon, BoltIcon, BookOpenIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
-import { mockStudents } from '@/api/mockData'
-import type { Student } from '@/api/users'
+import { usersApi } from '@/api/users'
+import type { StudentEngagementRow } from '@/api/users'
 import { StatCard } from '@/components/ui/StatCard'
 import { BeltBadge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { StudentRowSkeleton } from '@/components/ui/Skeleton'
 
-type SortKey = 'name' | 'techniquesLogged' | 'lastActiveAt' | 'flowchartNodes'
+type SortKey = 'name' | 'techniqueCount' | 'attendanceCount' | 'lastActive'
 type SortDir = 'asc' | 'desc'
 
-function getRiskLevel(lastActiveAt: string): 'green' | 'yellow' | 'red' {
-  const daysSince = (Date.now() - new Date(lastActiveAt).getTime()) / (1000 * 60 * 60 * 24)
-  if (daysSince <= 7) return 'green'
-  if (daysSince <= 21) return 'yellow'
-  return 'red'
+const CHURN_LABELS: Record<StudentEngagementRow['churnRisk'], string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
 }
 
-function RiskDot({ level }: { level: 'green' | 'yellow' | 'red' }) {
-  const colors = {
-    green: 'bg-success',
-    yellow: 'bg-warning',
-    red: 'bg-error',
-  }
+const CHURN_CLASSES: Record<StudentEngagementRow['churnRisk'], string> = {
+  low: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
+  medium: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
+  high: 'bg-red-500/15 text-red-400 border border-red-500/30',
+}
+
+function ChurnBadge({ risk }: { risk: StudentEngagementRow['churnRisk'] }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <div className={clsx('w-2.5 h-2.5 rounded-full', colors[level])} />
-    </div>
+    <span
+      className={clsx(
+        'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+        CHURN_CLASSES[risk],
+      )}
+    >
+      {CHURN_LABELS[risk]}
+    </span>
   )
 }
 
-function formatRelativeDate(dateStr: string) {
+function formatRelativeDate(dateStr: string | null) {
+  if (!dateStr) return 'Never'
   const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
   if (days === 0) return 'Today'
   if (days === 1) return 'Yesterday'
@@ -39,19 +46,46 @@ function formatRelativeDate(dateStr: string) {
 }
 
 export default function StudentDashboard() {
-  const [sortKey, setSortKey] = useState<SortKey>('lastActiveAt')
+  const [students, setStudents] = useState<StudentEngagementRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [sortKey, setSortKey] = useState<SortKey>('lastActive')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
-  const students = mockStudents
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
+    usersApi
+      .listStudentEngagement()
+      .then((res) => {
+        if (!cancelled) {
+          setStudents(res.data)
+          setLoading(false)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : 'Failed to load students.'
+          setError(message)
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const atRiskCount = useMemo(
-    () => students.filter((s) => getRiskLevel(s.lastActiveAt) === 'red').length,
+    () => students.filter((s) => s.churnRisk === 'high').length,
     [students],
   )
 
   const avgTechniques = useMemo(() => {
     if (students.length === 0) return 0
-    return Math.round(students.reduce((sum, s) => sum + s.techniquesLogged, 0) / students.length)
+    return Math.round(students.reduce((sum, s) => sum + s.techniqueCount, 0) / students.length)
   }, [students])
 
   const handleSort = (key: SortKey) => {
@@ -67,10 +101,13 @@ export default function StudentDashboard() {
     return [...students].sort((a, b) => {
       let cmp = 0
       if (sortKey === 'name') cmp = a.name.localeCompare(b.name)
-      else if (sortKey === 'techniquesLogged') cmp = a.techniquesLogged - b.techniquesLogged
-      else if (sortKey === 'lastActiveAt')
-        cmp = new Date(a.lastActiveAt).getTime() - new Date(b.lastActiveAt).getTime()
-      else if (sortKey === 'flowchartNodes') cmp = a.flowchartNodes - b.flowchartNodes
+      else if (sortKey === 'techniqueCount') cmp = a.techniqueCount - b.techniqueCount
+      else if (sortKey === 'attendanceCount') cmp = a.attendanceCount - b.attendanceCount
+      else if (sortKey === 'lastActive') {
+        const aTime = a.lastActive ? new Date(a.lastActive).getTime() : 0
+        const bTime = b.lastActive ? new Date(b.lastActive).getTime() : 0
+        cmp = aTime - bTime
+      }
       return sortDir === 'asc' ? cmp : -cmp
     })
   }, [students, sortKey, sortDir])
@@ -83,44 +120,60 @@ export default function StudentDashboard() {
 
   return (
     <div className="p-6">
-      <PageHeader
-        title="Students"
-        subtitle="Track progress and manage your roster"
-      />
+      <PageHeader title="Students" subtitle="Track progress and manage your roster" />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <StatCard
           label="Total Students"
-          value={students.length}
+          value={loading ? '—' : students.length}
           subtitle="Total enrolled"
           icon={UsersIcon}
           color="blue"
         />
         <StatCard
-          label="Active This Week"
-          value={Math.round(students.length * 0.8)}
-          subtitle="Engaged in the last 7 days"
+          label="At-Risk Students"
+          value={loading ? '—' : atRiskCount}
+          subtitle="High churn risk"
           icon={BoltIcon}
           color="emerald"
         />
         <StatCard
           label="Avg Techniques Logged"
-          value={7.3}
-          subtitle="Per student this month"
+          value={loading ? '—' : avgTechniques}
+          subtitle="Per student"
           icon={BookOpenIcon}
           color="purple"
         />
       </div>
 
-      {/* Table */}
-      {students.length === 0 ? (
+      {/* Error state */}
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Loading skeletons */}
+      {loading && (
+        <div className="bg-surface-elevated rounded-xl border border-slate-700 overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <StudentRowSkeleton key={i} />
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !error && students.length === 0 && (
         <EmptyState
           title="No students yet"
           description="Students will appear here once they join your gym."
           icon={<UsersIcon className="h-16 w-16" />}
         />
-      ) : (
+      )}
+
+      {/* Table */}
+      {!loading && students.length > 0 && (
         <div className="bg-surface-elevated rounded-xl border border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -130,77 +183,74 @@ export default function StudentDashboard() {
                     className="text-left px-4 py-3 text-text-secondary text-xs font-medium uppercase tracking-wider cursor-pointer hover:text-text-primary select-none"
                     onClick={() => handleSort('name')}
                   >
-                    Student <SortIcon col="name" />
+                    Name <SortIcon col="name" />
                   </th>
                   <th className="text-left px-4 py-3 text-text-secondary text-xs font-medium uppercase tracking-wider">
                     Belt
                   </th>
                   <th
                     className="text-left px-4 py-3 text-text-secondary text-xs font-medium uppercase tracking-wider cursor-pointer hover:text-text-primary select-none"
-                    onClick={() => handleSort('techniquesLogged')}
+                    onClick={() => handleSort('techniqueCount')}
                   >
-                    Techniques <SortIcon col="techniquesLogged" />
+                    Techniques Logged <SortIcon col="techniqueCount" />
                   </th>
                   <th
                     className="text-left px-4 py-3 text-text-secondary text-xs font-medium uppercase tracking-wider cursor-pointer hover:text-text-primary select-none"
-                    onClick={() => handleSort('lastActiveAt')}
+                    onClick={() => handleSort('attendanceCount')}
                   >
-                    Last Active <SortIcon col="lastActiveAt" />
+                    Attendance <SortIcon col="attendanceCount" />
                   </th>
                   <th
                     className="text-left px-4 py-3 text-text-secondary text-xs font-medium uppercase tracking-wider cursor-pointer hover:text-text-primary select-none"
-                    onClick={() => handleSort('flowchartNodes')}
+                    onClick={() => handleSort('lastActive')}
                   >
-                    Nodes <SortIcon col="flowchartNodes" />
+                    Last Active <SortIcon col="lastActive" />
                   </th>
                   <th className="text-left px-4 py-3 text-text-secondary text-xs font-medium uppercase tracking-wider">
-                    Risk
+                    Churn Risk
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((student: Student) => {
-                  const risk = getRiskLevel(student.lastActiveAt)
-                  return (
-                    <tr
-                      key={student.id}
-                      className="border-b border-slate-800 hover:bg-surface-card/50 transition-colors cursor-pointer"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                            <span className="text-primary font-semibold text-xs">
-                              {student.name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')
-                                .slice(0, 2)}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-text-primary text-sm font-medium">{student.name}</p>
-                            <p className="text-text-muted text-xs">{student.email}</p>
-                          </div>
+                {sorted.map((student: StudentEngagementRow) => (
+                  <tr
+                    key={student.id}
+                    className="border-b border-slate-800 hover:bg-surface-card/50 transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-primary font-semibold text-xs">
+                            {student.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')
+                              .slice(0, 2)}
+                          </span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <BeltBadge belt={student.belt} />
-                      </td>
-                      <td className="px-4 py-3 text-text-primary text-sm">
-                        {student.techniquesLogged}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary text-sm">
-                        {formatRelativeDate(student.lastActiveAt)}
-                      </td>
-                      <td className="px-4 py-3 text-text-primary text-sm">
-                        {student.flowchartNodes}
-                      </td>
-                      <td className="px-4 py-3">
-                        <RiskDot level={risk} />
-                      </td>
-                    </tr>
-                  )
-                })}
+                        <div>
+                          <p className="text-text-primary text-sm font-medium">{student.name}</p>
+                          <p className="text-text-muted text-xs">{student.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <BeltBadge belt={student.beltLevel} />
+                    </td>
+                    <td className="px-4 py-3 text-text-primary text-sm">
+                      {student.techniqueCount}
+                    </td>
+                    <td className="px-4 py-3 text-text-primary text-sm">
+                      {student.attendanceCount}
+                    </td>
+                    <td className="px-4 py-3 text-text-secondary text-sm">
+                      {formatRelativeDate(student.lastActive)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <ChurnBadge risk={student.churnRisk} />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

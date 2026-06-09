@@ -14,6 +14,17 @@ export interface Student {
   joinedAt: string
 }
 
+export interface StudentEngagementRow {
+  id: string
+  name: string
+  email: string
+  beltLevel: Belt
+  techniqueCount: number
+  attendanceCount: number
+  lastActive: string | null
+  churnRisk: 'low' | 'medium' | 'high'
+}
+
 export interface User {
   id: string
   gymId: string
@@ -31,4 +42,6 @@ export const usersApi = {
   listStudents: () => apiClient.get<Student[]>('/users'),
   getStudent: (id: string) => apiClient.get<Student>(`/users/${id}`),
   getMe: () => apiClient.get<User>('/users/me'),
+  /** GET /api/v1/users/students — returns engagement rows for the instructor portal */
+  listStudentEngagement: () => apiClient.get<StudentEngagementRow[]>('/users/students'),
 }

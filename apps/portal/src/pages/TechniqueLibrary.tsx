@@ -1,5 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { MagnifyingGlassIcon, PlayIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
+import {
+  MagnifyingGlassIcon,
+  PlayIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  VideoCameraSlashIcon,
+} from '@heroicons/react/24/outline'
 import { PlusIcon } from '@heroicons/react/24/solid'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useForm } from 'react-hook-form'
@@ -8,6 +14,7 @@ import { z } from 'zod'
 import { mockTechniques } from '@/api/mockData'
 import type { Technique, Position, TechniqueType } from '@/api/techniques'
 import type { Belt } from '@/store/authStore'
+import { videoApi } from '@/api/video'
 import { Button } from '@/components/ui/Button'
 import { Input, Select, Textarea } from '@/components/ui/Input'
 import { BeltBadge, PositionChip } from '@/components/ui/Badge'
@@ -31,15 +38,20 @@ interface TechniqueCardProps {
   technique: Technique
   onEdit: (t: Technique) => void
   onDelete: (id: string) => void
+  onDeleteVideo: (id: string) => void
 }
 
-function TechniqueCard({ technique, onEdit, onDelete }: TechniqueCardProps) {
+function TechniqueCard({ technique, onEdit, onDelete, onDeleteVideo }: TechniqueCardProps) {
   return (
     <div className="bg-surface-card rounded-xl overflow-hidden border border-slate-700 hover:border-slate-500 transition-colors group">
       {/* Thumbnail */}
       <div className="aspect-video bg-slate-800 relative flex items-center justify-center">
         {technique.thumbnailUrl ? (
-          <img src={technique.thumbnailUrl} alt={technique.title} className="w-full h-full object-cover" />
+          <img
+            src={technique.thumbnailUrl}
+            alt={technique.title}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className="flex flex-col items-center gap-2 text-text-muted">
             <PlayIcon className="h-10 w-10 opacity-40" />
@@ -55,10 +67,19 @@ function TechniqueCard({ technique, onEdit, onDelete }: TechniqueCardProps) {
           >
             <PencilSquareIcon className="h-4 w-4" />
           </button>
+          {technique.videoUrl && (
+            <button
+              onClick={() => onDeleteVideo(technique.id)}
+              className="p-1.5 bg-surface-elevated/90 rounded-lg text-text-secondary hover:text-amber-400 transition-colors"
+              title="Delete video"
+            >
+              <VideoCameraSlashIcon className="h-4 w-4" />
+            </button>
+          )}
           <button
             onClick={() => onDelete(technique.id)}
             className="p-1.5 bg-surface-elevated/90 rounded-lg text-text-secondary hover:text-error transition-colors"
-            title="Delete"
+            title="Delete technique"
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -145,12 +166,33 @@ export default function TechniqueLibrary() {
     setTechniques((prev) => prev.filter((t) => t.id !== id))
   }
 
+  const handleDeleteVideo = (id: string) => {
+    if (!window.confirm('Delete the video attached to this technique? This cannot be undone.'))
+      return
+    videoApi
+      .deleteVideo(id)
+      .then(() => {
+        setTechniques((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, videoUrl: null, thumbnailUrl: null } : t)),
+        )
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Failed to delete video.'
+        window.alert(message)
+      })
+  }
+
   const onSubmit = (data: TechniqueFormData) => {
     if (editingTechnique) {
       setTechniques((prev) =>
         prev.map((t) =>
           t.id === editingTechnique.id
-            ? { ...t, ...data, videoUrl: uploadedVideoUrl ?? data.videoUrl ?? null, updatedAt: new Date().toISOString() }
+            ? {
+                ...t,
+                ...data,
+                videoUrl: uploadedVideoUrl ?? data.videoUrl ?? null,
+                updatedAt: new Date().toISOString(),
+              }
             : t,
         ),
       )
@@ -247,6 +289,7 @@ export default function TechniqueLibrary() {
               technique={t}
               onEdit={openEdit}
               onDelete={handleDelete}
+              onDeleteVideo={handleDeleteVideo}
             />
           ))}
         </div>

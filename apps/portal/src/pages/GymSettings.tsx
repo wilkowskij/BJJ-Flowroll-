@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 import { useGymStore } from '@/store/gymStore'
+import { gymsApi } from '@/api/gyms'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -23,11 +24,20 @@ const TIER_LABELS: Record<string, string> = {
 }
 
 export default function GymSettings() {
-  const { gymName, primaryColor, secondaryColor, tier, activeStudentCount, nextInvoiceDate, setGymConfig } =
-    useGymStore()
+  const {
+    gymId,
+    gymName,
+    primaryColor,
+    secondaryColor,
+    tier,
+    activeStudentCount,
+    nextInvoiceDate,
+    setGymConfig,
+  } = useGymStore()
 
   const [isDragOver, setIsDragOver] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const {
     register,
@@ -47,10 +57,28 @@ export default function GymSettings() {
   const watchedSecondary = watch('secondaryColor')
   const watchedName = watch('gymName')
 
-  const onSubmit = (data: SettingsFormData) => {
+  const onSubmit = async (data: SettingsFormData) => {
+    setSaveError(null)
+    // Always update local store immediately for live preview responsiveness
     setGymConfig(data)
     document.documentElement.style.setProperty('--color-primary', data.primaryColor)
     document.documentElement.style.setProperty('--color-secondary', data.secondaryColor)
+
+    // Persist to backend if we have a gymId
+    if (gymId) {
+      try {
+        await gymsApi.updateGym(gymId, {
+          gymName: data.gymName,
+          primaryColor: data.primaryColor,
+          secondaryColor: data.secondaryColor,
+        })
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to save settings to server.'
+        setSaveError(message)
+        // Don't block UX — local store is already updated
+      }
+    }
+
     setIsSaved(true)
     setTimeout(() => setIsSaved(false), 2000)
   }
@@ -154,10 +182,7 @@ export default function GymSettings() {
                 className="rounded-xl border border-slate-600 overflow-hidden"
                 style={{ background: '#1E293B' }}
               >
-                <div
-                  className="h-2"
-                  style={{ background: watchedPrimary || primaryColor }}
-                />
+                <div className="h-2" style={{ background: watchedPrimary || primaryColor }} />
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div
@@ -190,10 +215,12 @@ export default function GymSettings() {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              disabled={!isDirty && !isSaved}
-            >
+            {saveError && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                {saveError}
+              </p>
+            )}
+            <Button type="submit" disabled={!isDirty && !isSaved}>
               {isSaved ? 'Saved!' : 'Save Settings'}
             </Button>
           </form>
@@ -219,7 +246,9 @@ export default function GymSettings() {
 
             {/* Active students */}
             <div>
-              <p className="text-text-muted text-xs uppercase tracking-wider mb-1">Active Students</p>
+              <p className="text-text-muted text-xs uppercase tracking-wider mb-1">
+                Active Students
+              </p>
               <p className="text-text-primary text-2xl font-bold">{activeStudentCount}</p>
               <p className="text-text-muted text-xs mt-0.5">Students with activity this month</p>
             </div>

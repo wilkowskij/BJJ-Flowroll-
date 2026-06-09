@@ -14,6 +14,8 @@ import {
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline'
 import { apiClient } from '@/api/client'
+import { videoApi } from '@/api/video'
+import type { StorageUsage } from '@/api/video'
 import { useGymStore } from '@/store/gymStore'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -165,6 +167,7 @@ export default function Dashboard() {
   const { gymName, activeStudentCount } = useGymStore()
 
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [storage, setStorage] = useState<StorageUsage | null>(null)
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([])
   const [loading, setLoading] = useState(true)
@@ -184,7 +187,9 @@ export default function Dashboard() {
 
       // Fetch recent weekly posts for activity feed — fall back to []
       const postsResult = await apiClient
-        .get<Array<{ id: string; title: string; status: string; createdAt: string; updatedAt: string }>>('/weekly-posts?limit=5')
+        .get<
+          Array<{ id: string; title: string; status: string; createdAt: string; updatedAt: string }>
+        >('/weekly-posts?limit=5')
         .then((r) => r.data)
         .catch(() => [])
 
@@ -194,8 +199,15 @@ export default function Dashboard() {
         .then((r) => r.data)
         .catch(() => [])
 
+      // Fetch real storage usage — fall back to null (stat card will use mock)
+      const storageResult = await videoApi
+        .getStorageUsage()
+        .then((r) => r.data)
+        .catch(() => null)
+
       if (!cancelled) {
         setStats(statsResult)
+        setStorage(storageResult)
 
         // Map posts to activity items
         const activityItems: ActivityItem[] = postsResult.map((p) => ({
@@ -219,10 +231,16 @@ export default function Dashboard() {
 
   const s = stats ?? MOCK_STATS
 
+  // Prefer real storage data; fall back to the stats field
+  const storageGb = storage?.usedGb ?? s.storageUsedGb
+  const storageLimitGb = storage?.limitGb ?? 10
+  const storagePercent = storage?.percentUsed ?? null
   const storageLabel =
-    s.storageUsedGb >= 1
-      ? `${s.storageUsedGb.toFixed(1)} GB`
-      : `${Math.round(s.storageUsedGb * 1024)} MB`
+    storageGb >= 1
+      ? `${storageGb.toFixed(1)} GB / ${storageLimitGb} GB`
+      : `${Math.round(storageGb * 1024)} MB / ${storageLimitGb} GB`
+  const storageSubtitle =
+    storagePercent !== null ? `${storagePercent}% used` : `of ${storageLimitGb} GB`
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -254,11 +272,7 @@ export default function Dashboard() {
         <StatCard
           label="Classes / Month"
           value={loading ? '—' : s.classesThisMonth}
-          subtitle={
-            s.nextClassTime
-              ? `Next: ${s.nextClassTime}`
-              : 'No upcoming classes'
-          }
+          subtitle={s.nextClassTime ? `Next: ${s.nextClassTime}` : 'No upcoming classes'}
           iconBg="bg-violet-500/20"
           borderColor="border-violet-500"
           icon={<CalendarIcon className="h-5 w-5 text-violet-400" />}
@@ -266,7 +280,7 @@ export default function Dashboard() {
         <StatCard
           label="Storage Used"
           value={loading ? '—' : storageLabel}
-          subtitle="of 10 GB"
+          subtitle={loading ? '' : storageSubtitle}
           iconBg="bg-amber-500/20"
           borderColor="border-amber-500"
           icon={<CircleStackIcon className="h-5 w-5 text-amber-400" />}
@@ -395,8 +409,15 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {upcomingClasses.map((cls) => {
               const dt = new Date(cls.scheduledAt)
-              const dateStr = dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-              const timeStr = dt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+              const dateStr = dt.toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })
+              const timeStr = dt.toLocaleTimeString(undefined, {
+                hour: 'numeric',
+                minute: '2-digit',
+              })
               return (
                 <div
                   key={cls.id}
