@@ -16,6 +16,7 @@ import { AuthGuard, AuthenticatedUser } from '../auth/auth.guard';
 import { CreateTechniqueDto } from './dto/create-technique.dto';
 import { UpdateTechniqueDto } from './dto/update-technique.dto';
 import { FilterTechniqueDto } from './dto/filter-technique.dto';
+import { VideoLibraryFilterDto } from './dto/video-library-filter.dto';
 
 @Controller('api/v1/techniques')
 @UseGuards(AuthGuard)
@@ -25,6 +26,12 @@ export class TechniqueController {
   @Get('templates')
   findTemplates() {
     return this.techniqueService.findTemplates();
+  }
+
+  @Get('videos')
+  listVideos(@Req() req: Request, @Query() filters: VideoLibraryFilterDto) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.techniqueService.listVideos(user.gymId, filters);
   }
 
   @Get()

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveFlowchartDto } from './dto/save-flowchart.dto';
 
@@ -42,6 +42,41 @@ export class FlowchartService {
     return this.prisma.flowchart.findMany({
       where: { gymId, isTemplate: true },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async listTemplates(gymId: string) {
+    return this.prisma.flowchart.findMany({
+      where: {
+        isTemplate: true,
+        OR: [{ gymId: null }, { gymId }],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async cloneTemplate(templateId: string, userId: string, gymId: string) {
+    const template = await this.prisma.flowchart.findFirst({
+      where: {
+        id: templateId,
+        isTemplate: true,
+        OR: [{ gymId: null }, { gymId }],
+      },
+    });
+
+    if (!template) {
+      throw new NotFoundException(`Template ${templateId} not found`);
+    }
+
+    return this.prisma.flowchart.create({
+      data: {
+        userId,
+        gymId,
+        title: template.title,
+        nodes: template.nodes,
+        edges: template.edges,
+        isTemplate: false,
+      },
     });
   }
 }
