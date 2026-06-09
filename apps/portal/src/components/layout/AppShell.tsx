@@ -24,7 +24,9 @@ export function AppShell() {
         <TopBar title={title} />
         <main className="flex-1 overflow-y-auto">
           <ErrorBoundary>
-            <Outlet />
+            <div className="animate-in fade-in duration-200">
+              <Outlet />
+            </div>
           </ErrorBoundary>
         </main>
       </div>

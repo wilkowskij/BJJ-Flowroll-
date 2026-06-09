@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowTopRightOnSquareIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { ArrowTopRightOnSquareIcon, CheckIcon, UsersIcon, CreditCardIcon, CircleStackIcon } from '@heroicons/react/24/outline'
 import { subscriptionApi, type BillingStatus } from '@/api/subscription'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { StatCard } from '@/components/ui/StatCard'
 
 const TIER_CONFIG: Record<
   'starter' | 'growth' | 'pro',
@@ -74,11 +76,34 @@ export default function Billing() {
 
   return (
     <div className="p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-text-primary text-2xl font-bold">Billing</h1>
-        <p className="text-text-secondary text-sm mt-0.5">
-          Manage your FlowMat subscription and billing
-        </p>
+      <PageHeader
+        title="Billing"
+        subtitle="Manage your subscription and usage"
+      />
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatCard
+          label="Active Students"
+          value={isLoading ? '—' : (status?.activeStudents ?? 0)}
+          subtitle="Currently enrolled and active"
+          icon={UsersIcon}
+          color="blue"
+        />
+        <StatCard
+          label="Estimated Bill"
+          value={isLoading ? '—' : (status ? formatCurrency(status.estimatedMonthlyBill) : '—')}
+          subtitle="This billing period"
+          icon={CreditCardIcon}
+          color="emerald"
+        />
+        <StatCard
+          label="Storage Used"
+          value="2.4 GB"
+          subtitle="of 10 GB included"
+          icon={CircleStackIcon}
+          color="purple"
+        />
       </div>
 
       {error && (

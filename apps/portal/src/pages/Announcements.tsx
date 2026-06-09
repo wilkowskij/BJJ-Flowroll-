@@ -9,6 +9,7 @@ import { Input, Textarea } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 interface Announcement {
   id: string
@@ -75,12 +76,10 @@ export default function Announcements() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-text-primary text-2xl font-bold">Announcements</h1>
-        <p className="text-text-muted text-sm mt-1">
-          Send a message to all students in your gym. Delivered via push notification.
-        </p>
-      </div>
+      <PageHeader
+        title="Announcements"
+        subtitle="Broadcast messages to all your students"
+      />
 
       {/* Compose */}
       <Card className="p-5">
