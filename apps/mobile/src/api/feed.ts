@@ -22,7 +22,17 @@ export interface FeedAnnouncement {
 
 export type FeedItem = FeedWeeklyPost | FeedAnnouncement;
 
-export async function getFeed(gymId: string): Promise<FeedItem[]> {
-  const response = await apiClient.get<FeedItem[]>(`/gyms/${gymId}/feed`);
-  return response.data;
+// API shape returned by /api/v1/weekly-posts/feed
+export interface WeeklyPost {
+  id: string;
+  title: string;
+  body?: string;
+  videoUrl?: string;
+  muxPlaybackId?: string;
+  techniqueIds: string[];
+  beltTarget?: string;
+  publishedAt: string;
 }
+
+export const getFeed = () =>
+  apiClient.get<WeeklyPost[]>('/api/v1/weekly-posts/feed');

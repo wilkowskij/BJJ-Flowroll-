@@ -20,6 +20,12 @@ import { UpdateWeeklyPostDto } from './dto/update-weekly-post.dto';
 export class WeeklyPostController {
   constructor(private readonly weeklyPostService: WeeklyPostService) {}
 
+  @Get('feed')
+  getFeed(@Req() req: Request) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.weeklyPostService.getFeed(user.gymId);
+  }
+
   @Get()
   findAll(@Req() req: Request) {
     const user = (req as any).user as AuthenticatedUser;

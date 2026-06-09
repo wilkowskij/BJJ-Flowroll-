@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import Mux from '@mux/mux-node';
+import { createId } from '@paralleldrive/cuid2';
 
 @Injectable()
 export class VideoService {
@@ -10,42 +12,57 @@ export class VideoService {
   private readonly s3: S3Client;
   private readonly mux: Mux;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     this.s3 = new S3Client({
-      region: this.configService.get<string>('AWS_REGION', 'us-east-1'),
+      region: config.get<string>('AWS_REGION', 'us-east-1'),
       credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID', ''),
-        secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY', ''),
+        accessKeyId: config.get<string>('AWS_ACCESS_KEY_ID', ''),
+        secretAccessKey: config.get<string>('AWS_SECRET_ACCESS_KEY', ''),
       },
     });
 
     this.mux = new Mux({
-      tokenId: this.configService.get<string>('MUX_TOKEN_ID', ''),
-      tokenSecret: this.configService.get<string>('MUX_TOKEN_SECRET', ''),
+      tokenId: config.get<string>('MUX_TOKEN_ID', ''),
+      tokenSecret: config.get<string>('MUX_TOKEN_SECRET', ''),
     });
   }
 
-  async getUploadUrl(gymId: string, filename: string): Promise<{ uploadUrl: string; key: string }> {
-    const bucket = this.configService.get<string>('AWS_S3_BUCKET', 'flowmat-videos');
-    const key = `uploads/${gymId}/${Date.now()}-${filename}`;
+  async getPresignedUploadUrl(
+    gymId: string,
+    fileName: string,
+    contentType: string,
+  ): Promise<{ uploadUrl: string; s3Key: string }> {
+    // Check storage quota (10 GB cap per gym)
+    const usageBytes = await this.getGymStorageUsage(gymId);
+    const tenGbBytes = 10 * 1024 * 1024 * 1024;
+    if (usageBytes >= tenGbBytes) {
+      throw new Error('Storage quota exceeded. Upgrade your plan or delete videos.');
+    }
 
+    const key = `gyms/${gymId}/videos/${createId()}-${fileName}`;
     const command = new PutObjectCommand({
-      Bucket: bucket,
+      Bucket: this.config.get<string>('AWS_S3_BUCKET', 'flowmat-videos'),
       Key: key,
-      ContentType: 'video/*',
+      ContentType: contentType,
+      Metadata: { gymId },
     });
 
     const uploadUrl = await getSignedUrl(this.s3, command, { expiresIn: 3600 });
-
-    return { uploadUrl, key };
+    return { uploadUrl, s3Key: key };
   }
 
-  async handleMuxWebhook(body: any, signature: string): Promise<void> {
-    const webhookSecret = this.configService.get<string>('MUX_WEBHOOK_SECRET', '');
+  async handleMuxWebhook(
+    payload: Record<string, unknown>,
+    signature: string,
+  ): Promise<void> {
+    const webhookSecret = this.config.get<string>('MUX_WEBHOOK_SECRET', '');
 
     try {
       this.mux.webhooks.verifySignature(
-        JSON.stringify(body),
+        JSON.stringify(payload),
         { 'mux-signature': signature },
         webhookSecret,
       );
@@ -54,25 +71,66 @@ export class VideoService {
       throw err;
     }
 
-    const eventType: string = body.type;
+    const eventType = payload.type as string;
     this.logger.log(`Received Mux webhook: ${eventType}`);
 
-    switch (eventType) {
-      case 'video.asset.ready':
-        await this.onAssetReady(body.data);
-        break;
-      case 'video.asset.errored':
-        this.logger.error(`Mux asset errored: ${body.data?.id}`);
-        break;
-      default:
-        this.logger.log(`Unhandled Mux event: ${eventType}`);
+    if (eventType === 'video.asset.ready') {
+      const data = payload.data as Record<string, unknown>;
+      const muxAssetId = data?.id as string;
+      const playbackIds = data?.playback_ids as Array<{ id: string }> | undefined;
+      const muxPlaybackId = playbackIds?.[0]?.id;
+
+      if (muxAssetId && muxPlaybackId) {
+        await this.prisma.technique.updateMany({
+          where: { muxAssetId },
+          data: {
+            muxPlaybackId,
+            videoUrl: `https://stream.mux.com/${muxPlaybackId}.m3u8`,
+          },
+        });
+        this.logger.log(
+          `Updated technique with muxAssetId=${muxAssetId}, playbackId=${muxPlaybackId}`,
+        );
+      }
+    } else if (eventType === 'video.asset.errored') {
+      const data = payload.data as Record<string, unknown>;
+      this.logger.error(`Mux asset errored: ${data?.id}`);
+    } else {
+      this.logger.log(`Unhandled Mux event: ${eventType}`);
     }
   }
 
-  private async onAssetReady(data: any): Promise<void> {
-    const assetId: string = data?.id;
-    const playbackId: string = data?.playback_ids?.[0]?.id;
-    this.logger.log(`Mux asset ready — assetId: ${assetId}, playbackId: ${playbackId}`);
-    // TODO: Update Technique or WeeklyPost with muxAssetId + muxPlaybackId
+  async createMuxUploadFromS3Key(
+    gymId: string,
+    s3Key: string,
+    techniqueId: string,
+  ): Promise<{ muxAssetId: string }> {
+    const bucket = this.config.get<string>('AWS_S3_BUCKET', 'flowmat-videos');
+    const region = this.config.get<string>('AWS_REGION', 'us-east-1');
+    const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
+
+    const asset = await this.mux.video.assets.create({
+      input: [{ url: s3Url }],
+      playback_policy: ['public'],
+      meta: { gymId, techniqueId },
+    });
+
+    // Store asset ID on technique while it processes asynchronously
+    await this.prisma.technique.update({
+      where: { id: techniqueId },
+      data: { muxAssetId: asset.id },
+    });
+
+    return { muxAssetId: asset.id };
+  }
+
+  async getGymStorageUsage(gymId: string): Promise<number> {
+    // Count techniques with video in this gym and estimate storage.
+    // In production this would query Mux's storage API.
+    // Using a simple count × average size estimate (150 MB/video).
+    const count = await this.prisma.technique.count({
+      where: { gymId, muxAssetId: { not: null } },
+    });
+    return count * 150 * 1024 * 1024;
   }
 }

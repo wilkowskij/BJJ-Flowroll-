@@ -18,6 +18,12 @@ import { UpdateBeltTrackDto } from './dto/update-belt-track.dto';
 export class BeltTrackController {
   constructor(private readonly beltTrackService: BeltTrackService) {}
 
+  @Get('my-progress')
+  getMyProgress(@Req() req: Request) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.beltTrackService.getStudentProgress(user.gymId, user.supabaseUid);
+  }
+
   @Get(':beltLevel')
   findOne(@Param('beltLevel') beltLevel: BeltLevel, @Req() req: Request) {
     const user = (req as any).user as AuthenticatedUser;
