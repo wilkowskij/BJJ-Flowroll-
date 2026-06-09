@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,20 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/context/ThemeContext';
 import { StatBar } from '../../src/components/StatBar';
+import { Cache, CacheKeys } from '../../src/lib/cache';
+import { useAuthStore } from '../../src/store/authStore';
+import { useIsOnline } from '../../src/components/OfflineBanner';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const SHOW_FLOWCHART = true; // Toggle to false to see empty state
+
+// Shape for cached flowchart data
+interface FlowchartData {
+  nodes: Array<{ id: string; label: string; x: number; y: number }>;
+  edges: Array<{ from: string; to: string }>;
+  stats: { techniques: number; connections: number; positions: number };
+}
 
 function buildFlowchartHTML(primaryColor: string): string {
   return `<!DOCTYPE html>
@@ -80,7 +90,42 @@ function buildFlowchartHTML(primaryColor: string): string {
 export default function FlowchartScreen() {
   const { primaryColor } = useTheme();
   const router = useRouter();
+  const { userId } = useAuthStore();
+  const isOnline = useIsOnline();
   const showFlowchart = SHOW_FLOWCHART;
+
+  // Cache-aware data loading
+  useEffect(() => {
+    const cacheKey = userId ? CacheKeys.flowchart(userId) : null;
+    if (!cacheKey) return;
+
+    (async () => {
+      try {
+        // Load from cache (stale ok if offline)
+        const cached = isOnline
+          ? await Cache.get<FlowchartData>(cacheKey)
+          : await Cache.getStale<FlowchartData>(cacheKey);
+
+        if (cached) {
+          // In production: use cached.nodes / cached.edges to render the chart
+          console.log('[Flowchart] Loaded from cache, nodes:', cached.nodes?.length);
+        }
+      } catch (error) {
+        console.warn('[Flowchart] Cache read failed:', error);
+      }
+
+      // Background-refresh only when online
+      if (!isOnline) return;
+
+      try {
+        // In production: fetch from /api/v1/users/${userId}/flowchart
+        // const { data } = await apiClient.get(`/api/v1/users/${userId}/flowchart`);
+        // await Cache.set(cacheKey, data);
+      } catch (error) {
+        console.warn('[Flowchart] Background refresh failed:', error);
+      }
+    })();
+  }, [userId, isOnline]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
