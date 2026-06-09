@@ -1,0 +1,9 @@
+{
+  "name": "@flowmat/portal",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Portal: not yet implemented'",
+    "build": "echo 'Portal: not yet implemented'"
+  }
+}

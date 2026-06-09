@@ -1,0 +1,9 @@
+{
+  "name": "@flowmat/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Mobile: not yet implemented'",
+    "build": "echo 'Mobile: not yet implemented'"
+  }
+}
