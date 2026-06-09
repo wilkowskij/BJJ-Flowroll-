@@ -12,6 +12,7 @@ import { Input, Select, Textarea } from '@/components/ui/Input'
 import { BeltBadge, PositionChip } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { VideoUpload } from '@/components/ui/VideoUpload'
 
 const techniqueSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters'),
@@ -94,6 +95,7 @@ export default function TechniqueLibrary() {
   const [filterType, setFilterType] = useState<TechniqueType | 'all'>('all')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTechnique, setEditingTechnique] = useState<Technique | null>(null)
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null)
 
   const {
     register,
@@ -118,12 +120,14 @@ export default function TechniqueLibrary() {
 
   const openAdd = () => {
     setEditingTechnique(null)
+    setUploadedVideoUrl(null)
     reset({ difficulty: 3, title: '', description: '', videoUrl: '' })
     setIsModalOpen(true)
   }
 
   const openEdit = (t: Technique) => {
     setEditingTechnique(t)
+    setUploadedVideoUrl(null)
     reset({
       title: t.title,
       description: t.description,
@@ -145,7 +149,7 @@ export default function TechniqueLibrary() {
       setTechniques((prev) =>
         prev.map((t) =>
           t.id === editingTechnique.id
-            ? { ...t, ...data, videoUrl: data.videoUrl || null, updatedAt: new Date().toISOString() }
+            ? { ...t, ...data, videoUrl: uploadedVideoUrl ?? data.videoUrl ?? null, updatedAt: new Date().toISOString() }
             : t,
         ),
       )
@@ -154,7 +158,7 @@ export default function TechniqueLibrary() {
         id: `tech-${Date.now()}`,
         gymId: 'gym-1',
         ...data,
-        videoUrl: data.videoUrl || null,
+        videoUrl: uploadedVideoUrl ?? data.videoUrl ?? null,
         thumbnailUrl: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -327,6 +331,18 @@ export default function TechniqueLibrary() {
             error={errors.videoUrl?.message}
             {...register('videoUrl')}
           />
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              Or upload a video file
+            </label>
+            <VideoUpload
+              techniqueId={editingTechnique?.id}
+              currentVideoUrl={uploadedVideoUrl ?? undefined}
+              onUploadComplete={(url) => {
+                setUploadedVideoUrl(url)
+              }}
+            />
+          </div>
         </form>
       </Modal>
     </div>

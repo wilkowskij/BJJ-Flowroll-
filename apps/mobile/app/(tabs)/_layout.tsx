@@ -73,6 +73,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="gameplan"
+        options={{
+          title: 'Game Plan',
+          tabBarIcon: ({ color, focused }: TabIconProps) => (
+            <Ionicons
+              name={(focused ? 'trophy' : 'trophy-outline') as IoniconName}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="schedule"
         options={{
           title: 'Schedule',
