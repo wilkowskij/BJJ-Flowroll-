@@ -12,6 +12,7 @@ import StudentDashboard from './pages/StudentDashboard'
 import BeltTracks from './pages/BeltTracks'
 import Announcements from './pages/Announcements'
 import GymSettings from './pages/GymSettings'
+import Billing from './pages/Billing'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="belt-tracks" element={<BeltTracks />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="settings" element={<GymSettings />} />
+          <Route path="billing" element={<Billing />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -9,6 +9,7 @@ import {
   TrophyIcon,
   MegaphoneIcon,
   CogIcon,
+  CreditCardIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { label: 'Belt Tracks', path: '/belt-tracks', icon: TrophyIcon },
   { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon },
   { label: 'Settings', path: '/settings', icon: CogIcon },
+  { label: 'Billing', path: '/billing', icon: CreditCardIcon },
 ]
 
 export function Sidebar() {
