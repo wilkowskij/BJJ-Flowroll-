@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+.expo
+.next
+prisma/generated
+coverage
+*.lock
+pnpm-lock.yaml
+package-lock.json
