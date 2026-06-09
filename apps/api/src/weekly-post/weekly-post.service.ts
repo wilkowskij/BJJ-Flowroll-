@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 import { CreateWeeklyPostDto } from './dto/create-weekly-post.dto';
 import { UpdateWeeklyPostDto } from './dto/update-weekly-post.dto';
 
 @Injectable()
 export class WeeklyPostService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationService,
+  ) {}
 
   async create(gymId: string, instructorId: string, dto: CreateWeeklyPostDto) {
     return this.prisma.weeklyPost.create({
@@ -58,11 +62,32 @@ export class WeeklyPostService {
   }
 
   async publish(id: string, gymId: string) {
-    await this.findOne(id, gymId);
-    return this.prisma.weeklyPost.update({
+    const post = await this.findOne(id, gymId);
+    const updated = await this.prisma.weeklyPost.update({
       where: { id },
       data: { publishedAt: new Date() },
     });
+
+    // Notify all active students in the gym (fire-and-forget)
+    this.prisma.user
+      .findMany({
+        where: { gymId, isActive: true, firebaseToken: { not: null } },
+        select: { firebaseToken: true },
+      })
+      .then((users) => {
+        const tokens = users.map((u) => u.firebaseToken as string).filter(Boolean);
+        if (tokens.length > 0) {
+          return this.notifications.sendMulticastNotification(
+            tokens,
+            'New post from your gym',
+            post.title,
+            { type: 'weekly_post', postId: id },
+          );
+        }
+      })
+      .catch(() => {/* best-effort */});
+
+    return updated;
   }
 
   async getFeed(gymId: string) {

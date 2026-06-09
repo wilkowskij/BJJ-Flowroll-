@@ -73,6 +73,7 @@ model Gym {
   beltTracks    BeltTrack[]
   classes       ClassSchedule[]
   subscription  Subscription?
+  announcements Announcement[]
 
   @@index([slug])
 }
@@ -262,4 +263,18 @@ model Subscription {
   updatedAt            DateTime         @updatedAt
 
   gym Gym @relation(fields: [gymId], references: [id])
+}
+
+model Announcement {
+  id           String   @id @default(cuid())
+  gymId        String
+  instructorId String
+  title        String
+  body         String
+  createdAt    DateTime @default(now())
+
+  gym Gym @relation(fields: [gymId], references: [id])
+
+  @@index([gymId])
+  @@index([gymId, createdAt])
 }

@@ -2,15 +2,23 @@ import {
   Controller,
   Get,
   Patch,
+  Put,
   Param,
   Body,
   UseGuards,
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { IsString, IsNotEmpty } from 'class-validator';
 import { UserService } from './user.service';
 import { AuthGuard, AuthenticatedUser } from '../auth/auth.guard';
 import { UpdateBeltDto } from './dto/update-belt.dto';
+
+class UpdateFcmTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
 
 @Controller('api/v1/users')
 @UseGuards(AuthGuard)
@@ -33,6 +41,12 @@ export class UserController {
   findOne(@Param('id') id: string, @Req() req: Request) {
     const user = (req as any).user as AuthenticatedUser;
     return this.userService.findOne(id, user.gymId);
+  }
+
+  @Put('me/fcm-token')
+  updateFcmToken(@Body() dto: UpdateFcmTokenDto, @Req() req: Request) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.userService.updateFcmToken(user.supabaseUid, user.gymId, dto.token);
   }
 
   @Patch(':id/belt')

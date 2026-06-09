@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 import { UpdateBeltDto } from './dto/update-belt.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationService,
+  ) {}
 
   async findBySupabaseUid(supabaseUid: string, gymId: string) {
     const user = await this.prisma.user.findFirst({
@@ -30,6 +34,14 @@ export class UserService {
     return user;
   }
 
+  async updateFcmToken(supabaseUid: string, gymId: string, token: string) {
+    await this.prisma.user.updateMany({
+      where: { supabaseUid, gymId },
+      data: { firebaseToken: token },
+    });
+    return { updated: true };
+  }
+
   async promoteBelt(id: string, gymId: string, dto: UpdateBeltDto) {
     const user = await this.findOne(id, gymId);
 
@@ -47,6 +59,19 @@ export class UserService {
         },
       }),
     ]);
+
+    // Fire-and-forget push notification to promoted student
+    if (user.firebaseToken) {
+      const beltName = dto.beltLevel.charAt(0).toUpperCase() + dto.beltLevel.slice(1);
+      this.notifications
+        .sendPushNotification(
+          user.firebaseToken,
+          '🥋 Belt Promotion!',
+          `Congratulations! You've been promoted to ${beltName} belt.`,
+          { type: 'belt_promotion', toBelt: dto.beltLevel },
+        )
+        .catch(() => {/* best-effort */});
+    }
 
     return updatedUser;
   }

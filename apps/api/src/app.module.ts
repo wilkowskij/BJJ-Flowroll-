@@ -13,6 +13,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { VideoModule } from './video/video.module';
 import { NotificationModule } from './notification/notification.module';
+import { AnnouncementModule } from './announcement/announcement.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { RedisModule } from './redis/redis.module';
     SubscriptionModule,
     VideoModule,
     NotificationModule,
+    AnnouncementModule,
   ],
   controllers: [],
   providers: [],

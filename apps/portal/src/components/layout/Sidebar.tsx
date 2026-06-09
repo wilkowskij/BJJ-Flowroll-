@@ -6,6 +6,8 @@ import {
   NewspaperIcon,
   CalendarIcon,
   UsersIcon,
+  TrophyIcon,
+  MegaphoneIcon,
   CogIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline'
@@ -26,6 +28,8 @@ const navItems: NavItem[] = [
   { label: 'Weekly Posts', path: '/posts', icon: NewspaperIcon },
   { label: 'Class Planner', path: '/planner', icon: CalendarIcon },
   { label: 'Students', path: '/students', icon: UsersIcon },
+  { label: 'Belt Tracks', path: '/belt-tracks', icon: TrophyIcon },
+  { label: 'Announcements', path: '/announcements', icon: MegaphoneIcon },
   { label: 'Settings', path: '/settings', icon: CogIcon },
 ]
 

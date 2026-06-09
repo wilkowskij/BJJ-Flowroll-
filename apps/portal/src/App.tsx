@@ -9,6 +9,8 @@ import FlowchartBuilder from './pages/FlowchartBuilder'
 import WeeklyPosts from './pages/WeeklyPosts'
 import ClassPlanner from './pages/ClassPlanner'
 import StudentDashboard from './pages/StudentDashboard'
+import BeltTracks from './pages/BeltTracks'
+import Announcements from './pages/Announcements'
 import GymSettings from './pages/GymSettings'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -51,6 +53,8 @@ export default function App() {
           <Route path="posts" element={<WeeklyPosts />} />
           <Route path="planner" element={<ClassPlanner />} />
           <Route path="students" element={<StudentDashboard />} />
+          <Route path="belt-tracks" element={<BeltTracks />} />
+          <Route path="announcements" element={<Announcements />} />
           <Route path="settings" element={<GymSettings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
