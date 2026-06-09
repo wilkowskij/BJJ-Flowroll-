@@ -119,7 +119,7 @@ export default function Announcements() {
           <LoadingSpinner className="mt-6" />
         ) : announcements.length === 0 ? (
           <EmptyState
-            icon={MegaphoneIcon}
+            icon={<MegaphoneIcon className="w-8 h-8" />}
             title="No announcements yet"
             description="Send your first announcement to all students above."
           />
