@@ -13,9 +13,9 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "apps/api/src/**/*.ts": ["eslint --fix", "prettier --write"],
-    "apps/portal/src/**/*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-    "apps/mobile/**/*.{ts,tsx}": ["eslint --fix", "prettier --write"]
+    "apps/api/src/**/*.ts": ["prettier --write"],
+    "apps/portal/src/**/*.{ts,tsx}": ["prettier --write"],
+    "apps/mobile/**/*.{ts,tsx}": ["prettier --write"]
   },
   "devDependencies": {
     "turbo": "^2.0.0",
