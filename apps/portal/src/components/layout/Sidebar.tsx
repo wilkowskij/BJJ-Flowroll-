@@ -7,6 +7,7 @@ import {
   CalendarIcon,
   UsersIcon,
   CogIcon,
+  CreditCardIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
   { label: 'Class Planner', path: '/planner', icon: CalendarIcon },
   { label: 'Students', path: '/students', icon: UsersIcon },
   { label: 'Settings', path: '/settings', icon: CogIcon },
+  { label: 'Billing', path: '/billing', icon: CreditCardIcon },
 ]
 
 export function Sidebar() {

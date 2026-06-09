@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, HttpException, HttpStatus, ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
+import * as express from 'express';
 import { AppModule } from './app.module';
 
 @Catch()
@@ -34,7 +35,15 @@ class GlobalExceptionFilter implements ExceptionFilter {
 }
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
+
+  // Raw body parsing for Stripe webhooks — must be registered before global JSON parsing
+  app.use(
+    '/api/v1/subscription/stripe-webhook',
+    express.raw({ type: 'application/json' }),
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({

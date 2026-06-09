@@ -10,6 +10,7 @@ import WeeklyPosts from './pages/WeeklyPosts'
 import ClassPlanner from './pages/ClassPlanner'
 import StudentDashboard from './pages/StudentDashboard'
 import GymSettings from './pages/GymSettings'
+import Billing from './pages/Billing'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="planner" element={<ClassPlanner />} />
           <Route path="students" element={<StudentDashboard />} />
           <Route path="settings" element={<GymSettings />} />
+          <Route path="billing" element={<Billing />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
