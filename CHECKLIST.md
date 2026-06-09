@@ -19,24 +19,24 @@
 > Owner: Product Manager + Technical Lead
 
 - [x] **Decision 1 — App delivery model:** ✅ RESOLVED — Single FlowMat app, white-labeled at runtime (gym branding, colors, logo injected from config — no rebuild per gym). Per-gym App Store listings are a paid Phase 2 upgrade.
-- [ ] **Decision 2 — Video hosting in MVP:** Mux (native encoding + CDN) vs. YouTube/Vimeo embed. *Recommended: Mux from day one.*
-- [ ] **Decision 3 — Flowchart templates:** Ship 5–10 pre-built instructor templates at launch vs. blank canvas. *Recommended: ship templates to reduce onboarding friction.*
-- [ ] **Decision 4 — Belt promotion workflow:** Manual instructor-only vs. triggered by technique completions + class attendance. *Recommended: manual always — instructors are protective of this.*
-- [ ] **Decision 5 — Student social features:** Private flowcharts in v1.0 vs. optional sharing. *Recommended: private in v1.0, sharing toggle in v1.5.*
-- [ ] **Decision 6 — International scope:** US-only MVP vs. multi-currency/multi-language. *Recommended: US-only for MVP.*
+- [x] **Decision 2 — Video hosting in MVP:** ✅ RESOLVED — Mux from day one. Preserves gym branding (no YouTube UI in white-labeled app), instructors retain content control, cost is negligible at MVP scale, avoids a painful mid-product migration.
+- [x] **Decision 3 — Flowchart templates:** ✅ RESOLVED — Ship 5–10 FlowMat-owned starter templates (Guard Passing, Guard Retention, Back Takes, Mount Attacks, Fundamentals). Platform-owned (`gym_id = null`), cloneable to any gym. Instructors edit from there.
+- [x] **Decision 4 — Belt promotion workflow:** ✅ RESOLVED — Manual instructor-only promotion in v1.0. Add nullable `unlock_criteria` field to `BeltTrack` table now so v1.5 can add auto-unlock without a migration.
+- [x] **Decision 5 — Student social features:** ✅ RESOLVED — All flowcharts private in v1.0. Optional sharing toggle added in v1.5 once the core engagement loop is proven.
+- [x] **Decision 6 — International scope:** ✅ RESOLVED — US-only for MVP. Add multi-currency support when the first non-US gym requests it.
 - [x] **Decision 7 — "Active student" definition:** ✅ RESOLVED — Active student = currently paying a gym membership (membership status in the gym's system, not activity-based). Gym admin marks students as active/inactive. Billing snapshot counts active-status students.
-- [ ] **Decision 8 — Proration policy:** Define mid-cycle tier change billing behavior.
-- [ ] **Decision 9 — Video storage overage pricing:** Define cost per GB above 10GB cap before launch.
-- [ ] **Decision 10 — White-label timeline SLA:** Define delivery target (business days) for per-gym App Store builds in Phase 2.
-- [ ] **Decision 11 — ORM choice:** TypeORM (tighter NestJS integration) vs. Prisma (safer migrations, better type inference). Must decide before any schema work begins.
-- [ ] **Decision 12 — GraphQL vs REST:** GraphQL code-first (flexible for flowchart queries, more complex) vs. REST (simpler caching) vs. hybrid (REST for CRUD, GraphQL for flowchart only).
-- [ ] **Decision 13 — React Flow in React Native:** React Flow is DOM/SVG — it does not run in React Native. Option A: WebView wrapper (acceptable for read-only student flowchart). Option B: custom RN SVG canvas (`react-native-svg` + gesture handler). Option C: flowchart builder portal-only; students get WebView read-only. Must resolve before any mobile flowchart work.
-- [ ] **Decision 14 — Supabase Auth JWT custom claims:** Option A: inject `gym_id` + `role` as custom claims via Supabase Auth Hook (faster, more complex setup). Option B: API looks up `gym_id` from DB on every request via `supabase_uid` (simpler, one extra DB query per request).
-- [ ] **Decision 15 — Mux account ownership:** Single FlowMat Mux account with sub-environments per gym vs. one account total. Affects quota tracking and billing.
-- [ ] **Decision 16 — Class schedule recurrence format:** iCal RRULE vs. custom JSON. Must align with mobile calendar rendering library choice.
-- [ ] **Decision 17 — Active student billing snapshot timing:** Scheduled cron job at billing period end vs. event-driven count on student login/activity.
-- [ ] **Decision 18 — Offline support scope:** Does the student app need to display technique log or flowchart with no connectivity? Affects SQLite/AsyncStorage caching strategy.
-- [ ] **Decision 19 — Data erasure path:** Define `DELETE /user` erasure flow before launch (GDPR-compatible even for US-only MVP).
+- [x] **Decision 8 — Proration policy:** ✅ RESOLVED — No proration in v1.0. New tier applies at the next billing cycle. Simple, predictable, no surprise charges.
+- [x] **Decision 9 — Video storage overage pricing:** ✅ RESOLVED — $0.50/GB over the 10GB cap. Automated email warnings at 80% and 95% of cap. Clearly communicated at gym signup.
+- [x] **Decision 10 — White-label timeline SLA (Phase 2):** ✅ RESOLVED — 10 business days from gym providing all assets (icon, splash, app name, bundle ID, Apple dev credentials) to App Store submission. App Store review (1–3 days) on top. Expectation set explicitly at point of purchase.
+- [x] **Decision 11 — ORM choice:** ✅ RESOLVED — Prisma. Safer migrations, auto-generated TypeScript types, cleaner query API. Must be configured before any schema work begins.
+- [x] **Decision 12 — GraphQL vs REST:** ✅ RESOLVED — REST for v1.0 (`/api/v1/...`). Flowchart nodes/edges returned as JSON fields in REST responses. Evaluate GraphQL in v2.0 if instructor analytics requires complex cross-table queries.
+- [x] **Decision 13 — React Flow in React Native:** ✅ RESOLVED — Option C: flowchart builder is portal-only (web). Students get a WebView-rendered read-only view of their flowchart in the mobile app. Revisit mobile editing in v1.5 if there is demand.
+- [x] **Decision 14 — Supabase Auth JWT custom claims:** ✅ RESOLVED — Option A: inject `gym_id` and `role` as custom claims via Supabase Auth Hook (Postgres function on `auth.users`). Keeps API stateless, avoids per-request DB lookup overhead at scale.
+- [x] **Decision 15 — Mux account ownership:** ✅ RESOLVED — Single FlowMat Mux account. All assets tagged with `gym_id` metadata for per-tenant quota tracking and reporting. Simpler operations; revisit at franchise scale.
+- [x] **Decision 16 — Class schedule recurrence format:** ✅ RESOLVED — iCal RRULE. Industry standard, supported by `rrule.js` (web) and React Native calendar libraries. No custom parser to maintain.
+- [x] **Decision 17 — Active student billing snapshot timing:** ✅ RESOLVED — Scheduled cron job (NestJS `@Cron`), runs monthly 2 days before invoice generation. Auditable, predictable, matches gym owner expectations.
+- [x] **Decision 18 — Offline support scope:** ✅ RESOLVED — Read-only cached content in v1.0 (technique log + personal flowchart via AsyncStorage). No offline writes. Logging new techniques, check-in, and video playback require a connection.
+- [x] **Decision 19 — Data erasure path:** ✅ RESOLVED — Soft delete (`deleted_at` timestamp on `User` + related tables) with immediate PII anonymization on request. Hard delete cron permanently removes soft-deleted records after 30 days. GDPR-compatible.
 
 ---
 
