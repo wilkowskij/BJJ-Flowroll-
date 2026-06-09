@@ -11,6 +11,7 @@ import { Input, Textarea, Select } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { VideoUpload } from '@/components/ui/VideoUpload'
 
 const postSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -35,6 +36,7 @@ export default function WeeklyPosts() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPost, setEditingPost] = useState<WeeklyPost | null>(null)
   const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([])
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null)
 
   const {
     register,
@@ -49,6 +51,7 @@ export default function WeeklyPosts() {
   const openCreate = () => {
     setEditingPost(null)
     setSelectedTechniqueIds([])
+    setUploadedVideoUrl(null)
     reset({ targetBelt: 'all', title: '', body: '', scheduledAt: '' })
     setIsModalOpen(true)
   }
@@ -56,6 +59,7 @@ export default function WeeklyPosts() {
   const openEdit = (post: WeeklyPost) => {
     setEditingPost(post)
     setSelectedTechniqueIds(post.techniqueIds)
+    setUploadedVideoUrl(null)
     reset({
       title: post.title,
       body: post.body,
@@ -286,6 +290,18 @@ export default function WeeklyPosts() {
               type="date"
               error={errors.scheduledAt?.message}
               {...register('scheduledAt')}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              Video (optional)
+            </label>
+            <VideoUpload
+              weeklyPostId={editingPost?.id}
+              currentVideoUrl={uploadedVideoUrl ?? undefined}
+              onUploadComplete={(url) => {
+                setUploadedVideoUrl(url)
+              }}
             />
           </div>
         </form>
