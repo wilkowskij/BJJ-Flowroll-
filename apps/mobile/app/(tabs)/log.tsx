@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,14 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   FadeIn,
-  FadeOut,
   SlideInRight,
   SlideOutLeft,
 } from 'react-native-reanimated';
 import { TechniqueRow } from '../../src/components/TechniqueRow';
 import { BottomSheet } from '../../src/components/BottomSheet';
 import { useTheme } from '../../src/context/ThemeContext';
-import type { Position } from '../../src/api/techniques';
+import { getTechniques, type Technique, type Position } from '../../src/api/techniques';
 
 interface LoggedTechnique {
   id: string;
@@ -39,6 +38,9 @@ interface GymTechnique {
   position: Position;
 }
 
+// ---------------------------------------------------------------------------
+// Mock fallback data
+// ---------------------------------------------------------------------------
 const INITIAL_LOG: LoggedTechnique[] = [
   { id: 'log-1', name: 'Scissor Sweep', position: 'Guard', loggedAt: 'Today, 7:42pm', drilled: true, rolled: false },
   { id: 'log-2', name: 'Armbar from Guard', position: 'Guard', loggedAt: 'Today, 7:30pm', drilled: true, rolled: true },
@@ -47,13 +49,13 @@ const INITIAL_LOG: LoggedTechnique[] = [
   { id: 'log-5', name: 'Double Leg Takedown', position: 'Takedown', loggedAt: 'Jun 3, 7:00pm', drilled: true, rolled: false },
 ];
 
-const RECENT_IN_SHEET: GymTechnique[] = [
+const MOCK_RECENT: GymTechnique[] = [
   { id: 'r-1', name: 'Scissor Sweep', position: 'Guard' },
   { id: 'r-2', name: 'Armbar from Guard', position: 'Guard' },
   { id: 'r-3', name: 'Hip Bump Sweep', position: 'Guard' },
 ];
 
-const GYM_LIBRARY: GymTechnique[] = [
+const MOCK_LIBRARY: GymTechnique[] = [
   { id: 'g-1', name: 'Triangle Choke', position: 'Guard' },
   { id: 'g-2', name: 'Rear Naked Choke', position: 'Back' },
   { id: 'g-3', name: 'Double Leg Takedown', position: 'Takedown' },
@@ -61,6 +63,9 @@ const GYM_LIBRARY: GymTechnique[] = [
   { id: 'g-5', name: 'Omoplata', position: 'Guard' },
 ];
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 type SheetView = 'search' | 'quick-log';
 
 function getTodayDate(): string {
@@ -73,6 +78,17 @@ function getTimeNow(): string {
   return 'Today, ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
+function techniqueToGym(t: Technique): GymTechnique {
+  return {
+    id: t.id,
+    name: t.title,
+    position: (t.position as Position) ?? 'Guard',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Main screen
+// ---------------------------------------------------------------------------
 export default function LogScreen() {
   const { primaryColor } = useTheme();
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -83,8 +99,31 @@ export default function LogScreen() {
   const [drilled, setDrilled] = useState(true);
   const [rolled, setRolled] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedTechnique[]>(INITIAL_LOG);
+  const [apiResults, setApiResults] = useState<GymTechnique[]>([]);
   const [toastVisible, setToastVisible] = useState(false);
   const toastOpacity = useRef(new RNAnimated.Value(0)).current;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced search: fire API call 300 ms after user stops typing
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (!searchQuery.trim()) {
+        setApiResults([]);
+        return;
+      }
+      try {
+        const { data } = await getTechniques({ query: searchQuery.trim() });
+        setApiResults(data.map(techniqueToGym));
+      } catch (error) {
+        console.warn('Technique search failed, using local filter', error);
+        setApiResults([]);
+      }
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery]);
 
   const openSheet = () => {
     setSheetView('search');
@@ -93,6 +132,7 @@ export default function LogScreen() {
     setNotes('');
     setDrilled(true);
     setRolled(false);
+    setApiResults([]);
     setSheetVisible(true);
   };
 
@@ -130,12 +170,18 @@ export default function LogScreen() {
     showToast();
   };
 
-  const filteredRecent = RECENT_IN_SHEET.filter((t) =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-  const filteredLibrary = GYM_LIBRARY.filter((t) =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // When API has results, show them; otherwise fall back to local filter
+  const hasApiResults = apiResults.length > 0;
+  const filteredRecent = hasApiResults
+    ? []
+    : MOCK_RECENT.filter((t) =>
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+  const libraryTechniques = hasApiResults
+    ? apiResults
+    : MOCK_LIBRARY.filter((t) =>
+        t.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
 
   const renderLogEntry = ({ item }: { item: LoggedTechnique }) => (
     <TechniqueRow
@@ -190,7 +236,7 @@ export default function LogScreen() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             recentTechniques={filteredRecent}
-            libraryTechniques={filteredLibrary}
+            libraryTechniques={libraryTechniques}
             onSelectTechnique={selectTechnique}
           />
         ) : (
@@ -220,6 +266,9 @@ export default function LogScreen() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 interface SearchViewProps {
   searchQuery: string;
   onSearchChange: (text: string) => void;
@@ -250,14 +299,17 @@ function SearchView({
           returnKeyType="search"
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => onSearchChange('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            onPress={() => onSearchChange('')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Ionicons name="close-circle" size={18} color="#475569" />
           </TouchableOpacity>
         )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.sheetScroll}>
-        {/* Recently logged */}
+        {/* Recently logged — kept from local state (last 5 in mock) */}
         {recentTechniques.length > 0 && (
           <>
             <Text style={styles.sheetSectionLabel}>Recently Logged</Text>
@@ -273,7 +325,7 @@ function SearchView({
           </>
         )}
 
-        {/* Gym library */}
+        {/* Gym library — from API or local fallback */}
         {libraryTechniques.length > 0 && (
           <>
             <Text style={styles.sheetSectionLabel}>Gym Library</Text>

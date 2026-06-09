@@ -64,4 +64,12 @@ export class WeeklyPostService {
       data: { publishedAt: new Date() },
     });
   }
+
+  async getFeed(gymId: string) {
+    return this.prisma.weeklyPost.findMany({
+      where: { gymId, publishedAt: { not: null } },
+      orderBy: { publishedAt: 'desc' },
+      take: 20,
+    });
+  }
 }

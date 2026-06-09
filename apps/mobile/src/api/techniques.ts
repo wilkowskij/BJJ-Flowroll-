@@ -14,10 +14,14 @@ export type Position =
 
 export interface Technique {
   id: string;
-  name: string;
-  position: Position;
-  beltLevel: BeltLevel;
-  description?: string;
+  gymId: string;
+  title: string;
+  position: string;
+  beltLevel: string;
+  type: string;
+  difficulty: number;
+  videoUrl?: string;
+  muxPlaybackId?: string;
 }
 
 export interface LogEntry {
@@ -38,16 +42,14 @@ export interface LogTechniquePayload {
   notes?: string;
 }
 
-export async function searchTechniques(
-  gymId: string,
-  query: string,
-): Promise<Technique[]> {
-  const response = await apiClient.get<Technique[]>(
-    `/gyms/${gymId}/techniques`,
-    { params: { q: query } },
-  );
-  return response.data;
-}
+export const getTechniques = (params?: {
+  position?: string;
+  beltLevel?: string;
+  query?: string;
+}) => apiClient.get<Technique[]>('/api/v1/techniques', { params });
+
+export const getTemplates = () =>
+  apiClient.get<Technique[]>('/api/v1/techniques/templates');
 
 export async function getMyLog(studentId: string): Promise<LogEntry[]> {
   const response = await apiClient.get<LogEntry[]>(
