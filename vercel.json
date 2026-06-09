@@ -1,0 +1,7 @@
+{
+  "installCommand": "npm install --ignore-scripts",
+  "buildCommand": "npm run build --workspace=@flowmat/portal",
+  "outputDirectory": "apps/portal/dist",
+  "framework": "vite",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
