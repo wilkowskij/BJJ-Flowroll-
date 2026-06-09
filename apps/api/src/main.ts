@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, HttpException, HttpStatus, ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
 import * as express from 'express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 @Catch()
@@ -60,6 +61,15 @@ async function bootstrap(): Promise<void> {
   httpAdapter.get('/health', (_req: any, res: any) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('FlowMat API')
+    .setDescription('FlowMat BJJ SaaS — Instructor Portal + Student App API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
