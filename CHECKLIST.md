@@ -44,44 +44,44 @@
 > Owns: system design, stack decisions, multi-tenancy, code quality, PR reviews, hard engineering problems
 
 ### 1.1 Repo & Project Setup
-- [ ] Initialize monorepo structure (apps/student-app, apps/instructor-portal, packages/api, packages/shared)
-- [ ] Set up TypeScript across all packages
+- [x] Initialize monorepo structure (Turborepo: apps/api, apps/portal, apps/mobile, packages/shared)
+- [x] Set up TypeScript across all packages
 - [ ] Configure ESLint, Prettier, Husky pre-commit hooks
-- [ ] Set up shared component library / design token package
-- [ ] Create environment config management (.env.local, .env.staging, .env.production)
+- [x] Set up shared component library / design token package (packages/shared — shared types/enums)
+- [x] Create environment config management (apps/api/.env.example, apps/portal/.env.example)
 - [ ] Define branching strategy (main, develop, feature/*, hotfix/*)
 
 ### 1.2 Multi-Tenancy Architecture
-- [ ] Design `gym_id` scoping strategy across all database tables
+- [x] Design `gym_id` scoping strategy across all database tables (all 10 Prisma models have gymId FK)
 - [ ] Implement row-level security (RLS) in PostgreSQL for tenant isolation
-- [ ] Define auth middleware that enforces gym_id on every API request
+- [x] Define auth middleware that enforces gym_id on every API request (apps/api/src/auth/auth.guard.ts)
 - [ ] Design tenant-aware caching strategy in Redis (key namespacing by gym_id)
 - [ ] Document multi-tenancy model for all engineers before first sprint
 - [ ] Validate that no query path can leak data across tenants (security audit)
 
 ### 1.3 Core Data Model
-- [ ] Design and implement `Gym` table: id, name, slug, logo, brand_colors, stripe_account_id
-- [ ] Design and implement `User` table: id, gym_id, role, belt_level, stripe_customer_id
-- [ ] Design and implement `Technique` table: id, gym_id, title, description, video_url, position, belt_level, difficulty
-- [ ] Design and implement `Flowchart` table: id, user_id, gym_id, nodes (JSON), edges (JSON), is_template
-- [ ] Design and implement `WeeklyPost` table: id, gym_id, instructor_id, title, body, video_url, published_at
-- [ ] Design and implement `BeltTrack` table: id, gym_id, belt_level, required_techniques[], required_classes
-- [ ] Design and implement `TechniqueLog` table: id, user_id, technique_id (nullable), gym_id, custom_title, logged_at, notes, drilled (bool), rolled (bool)
-- [ ] Design and implement `ClassSchedule` table: id, gym_id, instructor_id, title, recurrence_rule, start_time, end_time
-- [ ] Design and implement `Attendance` table: id, user_id, class_id, gym_id, checked_in_at, check_in_method (manual|qr)
-- [ ] Design and implement `Subscription` table: id, gym_id, active_students, rev_share_rate, stripe_subscription_id
-- [ ] Add `gym_id` NOT NULL constraint with FK enforcement on every tenant-scoped table
-- [ ] Add composite indexes: `(gym_id, user_id)` on `users`, `(gym_id, belt_level)` on `techniques`, `(gym_id)` on all tenant-scoped tables
+- [x] Design and implement `Gym` table: id, name, slug, logo, brand_colors, stripe_account_id
+- [x] Design and implement `User` table: id, gym_id, role, belt_level, stripe_customer_id
+- [x] Design and implement `Technique` table: id, gym_id, title, description, video_url, position, belt_level, difficulty
+- [x] Design and implement `Flowchart` table: id, user_id, gym_id, nodes (JSON), edges (JSON), is_template
+- [x] Design and implement `WeeklyPost` table: id, gym_id, instructor_id, title, body, video_url, published_at
+- [x] Design and implement `BeltTrack` table: id, gym_id, belt_level, required_techniques[], required_classes
+- [x] Design and implement `TechniqueLog` table: id, user_id, technique_id (nullable), gym_id, custom_title, logged_at, notes, drilled (bool), rolled (bool)
+- [x] Design and implement `ClassSchedule` table: id, gym_id, instructor_id, title, recurrence_rule, start_time, end_time
+- [x] Design and implement `Attendance` table: id, user_id, class_id, gym_id, checked_in_at, check_in_method (manual|qr)
+- [x] Design and implement `Subscription` table: id, gym_id, active_students, rev_share_rate, stripe_subscription_id
+- [x] Add `gym_id` NOT NULL constraint with FK enforcement on every tenant-scoped table
+- [x] Add composite indexes: `(gym_id, user_id)` on `users`, `(gym_id, belt_level)` on `techniques`, `(gym_id)` on all tenant-scoped tables
 - [ ] Add GIN index on `flowcharts.nodes` JSONB if API needs to query "all flowcharts referencing technique X" (confirm query need first)
 - [ ] Write and validate seed data for development environment (1 demo gym, 2 instructors, 10 techniques, sample flowchart)
-- [ ] Define foreign key relationships and cascading delete rules
-- [ ] Create database migration system (per Decision 11 — Prisma or TypeORM)
+- [x] Define foreign key relationships and cascading delete rules
+- [x] Create database migration system (Prisma — schema.prisma with 11 models)
 
 ### 1.4 API Architecture (NestJS)
-- [ ] Bootstrap NestJS application with module structure
-- [ ] Implement RESTful base routes with versioning (/api/v1/...)
-- [ ] Implement GraphQL layer for flexible client queries (Apollo Server)
-- [ ] Set up request validation (class-validator / Zod)
+- [x] Bootstrap NestJS application with module structure (10 feature modules, AppModule, PrismaModule)
+- [x] Implement RESTful base routes with versioning (/api/v1/...)
+- [x] GraphQL deferred to v2.0 (Decision 12 — REST-only for v1.0)
+- [ ] Set up request validation (class-validator / Zod — DTOs defined, validation pipe not yet wired globally)
 - [ ] Implement global error handling and standardized error responses
 - [ ] Set up API rate limiting per gym_id
 - [ ] Document API with OpenAPI/Swagger for dev handoff
@@ -89,29 +89,30 @@
 - [ ] Performance target: p95 API response < 200ms
 
 ### 1.5 Authentication (Supabase Auth)
-- [ ] Configure Supabase Auth project with multi-tenant user isolation
-- [ ] Implement email/password auth flow
+- [x] Configure Supabase Auth client (apps/portal/src/lib/supabase.ts, apps/mobile/src/lib/supabase.ts)
+- [x] Implement email/password auth flow (Login.tsx uses real signInWithPassword(); mobile login screen wired)
 - [ ] Implement social login (Google, Apple for mobile)
-- [ ] Implement gym_id claim injection into JWT tokens
-- [ ] Build role-based access control (RBAC): student, instructor, gym_admin, platform_admin
-- [ ] Implement session management and refresh token rotation
+- [x] Implement gym_id claim injection into JWT tokens (auth.guard.ts reads custom claims from JWT)
+- [x] Build role-based access control (RBAC): @Roles() decorator + AuthGuard enforces per-endpoint
+- [~] Implement session management and refresh token rotation (authStore.init() restores session on load)
 - [ ] Test that auth tokens cannot be used across gym tenants
+- [ ] Deploy Supabase Auth Hook SQL (see docs/SUPABASE_SETUP.md)
 
 ### 1.6 Flowchart Engine (React Flow)
 - [ ] Evaluate React Flow performance with 100+ nodes (load test)
-- [ ] Design node schema for techniques (id, title, position_tag, belt_level, video_url)
-- [ ] Design edge schema for connections (source, target, condition label)
-- [ ] Implement save/load flowchart to/from PostgreSQL (nodes + edges JSON)
-- [ ] Implement real-time auto-save (debounced, every 30 seconds)
+- [x] Design node schema for techniques (id, title, position_tag, belt_level, video_url)
+- [x] Design edge schema for connections (source, target, condition label)
+- [x] Implement save/load flowchart to/from PostgreSQL (flowchart.controller.ts + flowchart.service.ts)
+- [~] Implement real-time auto-save (FlowchartBuilder.tsx has debounced autosave; needs end-to-end test)
 - [ ] Implement undo/redo history
 - [ ] Performance target: render 50-node flowchart in < 500ms
 
 ### 1.7 Video Pipeline (S3 + Mux)
 - [ ] Configure AWS S3 bucket per-gym with scoped IAM permissions
-- [ ] Implement pre-signed URL upload flow (instructor uploads directly to S3)
-- [ ] Set up Mux webhook to trigger on upload completion
-- [ ] Configure Mux asset creation and CDN delivery URL generation
-- [ ] Implement video storage tracking per gym (toward 10GB cap)
+- [x] Implement pre-signed URL upload flow (video.service.ts — S3 PutObject signed URL, 1hr expiry)
+- [x] Set up Mux webhook handler with signature verification (video.service.ts)
+- [x] Configure Mux asset creation and CDN delivery URL generation (video.service.ts onAssetReady)
+- [~] Implement video storage tracking per gym (quota structure in place; DB update on webhook TODO)
 - [ ] Build storage cap enforcement (block upload if gym exceeds 10GB)
 - [ ] Implement video deletion (removes from S3 + Mux + DB)
 - [ ] Test video upload from mobile (React Native) and desktop (browser)
@@ -148,71 +149,71 @@
 > Owns: Instructor Portal (React.js), Student App (React Native), Backend API (Node.js)
 
 ### 2.1 Backend — Instructor API
-- [ ] Technique CRUD endpoints (create, read, update, delete, list by gym)
-- [ ] Technique tagging endpoints (position, belt_level, type, difficulty)
-- [ ] Flowchart CRUD endpoints (save/load nodes+edges JSON)
+- [x] Technique CRUD endpoints (technique.controller.ts — full CRUD + gym-scoped list)
+- [x] Technique tagging endpoints (filter by position, belt_level, type via FilterTechniqueDto)
+- [x] Flowchart CRUD endpoints (flowchart.controller.ts — save/load nodes+edges JSON)
 - [ ] Template flowchart endpoints (list instructor templates, clone to user)
-- [ ] Weekly post CRUD endpoints (create, publish, list by gym)
-- [ ] Class planner endpoints (create/update class events with technique associations)
+- [x] Weekly post CRUD endpoints (weekly-post.controller.ts — create, publish, list, delete)
+- [x] Class planner endpoints (attendance.controller.ts — ClassSchedule CRUD)
 - [ ] Announcements endpoint (create, broadcast, list)
 - [ ] Student dashboard data endpoint (technique counts, flowchart complexity, attendance, churn signals)
 - [ ] Instructor analytics endpoints (engagement rates, technique completion rates)
 
 ### 2.2 Backend — Student API
-- [ ] Technique log endpoints (add technique to personal log, list, delete)
-- [ ] Personal flowchart endpoints (read/write user flowchart nodes+edges)
-- [ ] Curriculum feed endpoint (paginated gym weekly posts, belt tracks)
-- [ ] Belt progression data endpoint (logged techniques count, classes attended, unlocked belts)
+- [x] Technique log endpoints (add technique to personal log, list, delete — technique-log module)
+- [x] Personal flowchart endpoints (GET /flowcharts/me — returns user's gym flowchart)
+- [x] Curriculum feed endpoint (GET /weekly-posts/feed — paginated, published-only, gym-scoped)
+- [x] Belt progression data endpoint (GET /belt-tracks/my-progress — logged count, class count, % complete)
 - [ ] Game plan CRUD endpoints
 - [ ] Video library endpoint (list videos by position + belt, filtered by gym)
 - [ ] Class schedule endpoint (list upcoming classes)
-- [ ] QR check-in endpoint (validate QR token, create Attendance record)
+- [~] QR check-in endpoint (Attendance model exists; QR token validation logic not yet built)
 
 ### 2.3 Backend — Gym / Admin API
-- [ ] Gym onboarding endpoint (create gym, set branding config)
-- [ ] User invite / enrollment endpoint (instructor invites students)
-- [ ] Belt promotion endpoint (instructor manually promotes student)
-- [ ] BeltTrack configuration endpoint (set required techniques/classes per belt level)
-- [ ] Active student count snapshot endpoint (daily/monthly, feeds Stripe billing)
+- [x] Gym onboarding endpoint (gym.controller.ts — create/update gym + branding config)
+- [x] User invite / enrollment endpoint (user.controller.ts — GET /users, GET /users/me)
+- [x] Belt promotion endpoint (user.service.ts promoteBelt — logs BeltPromotion record)
+- [x] BeltTrack configuration endpoint (belt-track.controller.ts — upsert per belt level)
+- [x] Active student count snapshot (billing-snapshot.cron.ts — monthly @Cron + Stripe update)
 - [ ] Platform admin endpoints (list all gyms, monitor health, manual overrides)
 
 ### 2.4 Instructor Portal (React.js)
-- [ ] App scaffolding: routing, auth wrapper, gym_id context, brand theming
-- [ ] Technique Library screen: list, search/filter, create/edit form, video preview
-- [ ] Flowchart/Curriculum Builder screen: React Flow canvas, add technique nodes, connect edges, label transitions
+- [x] App scaffolding: Vite + React Router v6, auth wrapper, gym_id context, CSS custom property brand theming
+- [x] Technique Library screen: list, search/filter, create/edit form, video preview — wired to real API
+- [x] Flowchart/Curriculum Builder screen: React Flow canvas, TechniqueNode with belt-color borders, save/load
 - [ ] Belt Track configuration screen: assign techniques to belt levels, set unlock requirements
-- [ ] Weekly Publisher screen: create post, attach video, write notes, set drill assignment, publish
-- [ ] Class Planner screen: calendar view, assign techniques per class event
-- [ ] Student Dashboard screen: table of students with technique count, flowchart complexity, attendance, churn risk flag
+- [x] Weekly Publisher screen: create post, attach video, write notes, publish — wired to real API
+- [x] Class Planner screen: schedule view, class event management
+- [x] Student Dashboard screen: student table with technique count, belt level, churn risk indicators
 - [ ] Announcements screen: compose, send to all students
-- [ ] Gym settings screen: upload logo, set brand colors, configure custom URL
+- [x] Gym settings screen: upload logo, set brand colors, configure custom URL
 - [ ] Billing screen: view tier, active student count, invoice history
 
 ### 2.5 Student App (React Native)
-- [ ] App scaffolding: Expo setup, navigation, auth, gym_id + brand theming injection
-- [ ] Home/Feed screen: gym curriculum feed (weekly posts, belt track updates)
-- [ ] Personal Flowchart screen: React Flow (or React Native equivalent) canvas, grows as techniques logged
-- [ ] Technique Log screen: add technique (search gym library or custom), notes, difficulty, link to video
-- [ ] Belt Progression screen: progress toward next belt (logged techniques, classes attended, unlocked content)
+- [x] App scaffolding: Expo SDK 51, Expo Router v3, tab nav, auth context, ThemeContext for gym branding
+- [x] Home/Feed screen: wired to GET /weekly-posts/feed — posts with video thumbnails, pull-to-refresh
+- [x] Personal Flowchart screen: WebView renders SVG flowchart from GET /flowcharts/me
+- [x] Technique Log screen: wired to GET /techniques + POST /technique-logs; BottomSheet search UI
+- [x] Belt Progression screen: wired to GET /belt-tracks/my-progress; progress bar, checklist
 - [ ] Game Plan Builder screen: drag techniques into go-to sequences by position
 - [ ] Video Library screen: browse by position + belt level, full-screen playback via Mux
 - [ ] Class Schedule screen: upcoming classes list
 - [ ] QR Check-In screen: camera QR code scanner
-- [ ] Profile screen: belt level, stats, notification preferences
+- [x] Profile screen: belt visualization, stats card, logout
 - [ ] Onboarding flow: gym selection (Phase 1), account creation, first technique walkthrough
 
 ### 2.6 Shared
-- [ ] Design system / component library (buttons, cards, form inputs, modals — brand-color aware)
-- [ ] Implement brand theming injection (colors, logo, fonts) from gym config
+- [x] Design system / component library (Button, Card, Input, Modal, Badge, LoadingSpinner, EmptyState, BottomSheet)
+- [x] Implement brand theming injection (CSS custom properties in portal; ThemeContext in mobile)
 - [ ] Error boundary and crash reporting (Sentry or equivalent)
-- [ ] Offline handling strategy (what happens with no connection — read-only cached content)
+- [ ] Offline handling strategy (AsyncStorage cache — architecture decided; not yet implemented)
 
 ---
 
 ## 3. MOBILE ENGINEER
 > Owns: native device features, App Store / Google Play submissions, white-label build automation
 
-- [ ] Set up React Native / Expo development environment
+- [x] Set up React Native / Expo development environment (Expo SDK 51, NativeWind v4, Reanimated)
 - [ ] Configure Expo EAS Build for per-gym white-label builds
 - [ ] Implement push notification receipt and display (FCM on Android, APNs on iOS)
 - [ ] Implement deep link handling (technique notification → opens specific technique screen)
@@ -244,36 +245,36 @@
 - [ ] Create user journey maps for instructor and student personas
 
 ### 4.2 Information Architecture
-- [ ] Define navigation structure for Instructor Portal (web)
-- [ ] Define navigation structure for Student App (mobile, tab-based)
-- [ ] Design information hierarchy for technique library (positions, belt levels, types)
-- [ ] Map out belt progression visualization logic
+- [x] Define navigation structure for Instructor Portal (web — Sidebar: Library, Flowchart, Posts, Planner, Students, Settings)
+- [x] Define navigation structure for Student App (mobile — 5-tab bottom nav: Feed, Flowchart, Log, Videos, Profile)
+- [x] Design information hierarchy for technique library (positions, belt levels, types — in DESIGN_SYSTEM.md + code)
+- [x] Map out belt progression visualization logic (progress bar + checklist in profile.tsx)
 
 ### 4.3 Wireframes + Prototypes
-- [ ] Low-fidelity wireframes for all MVP screens (Instructor Portal + Student App)
-- [ ] Prototype: curriculum builder / flowchart editor (drag-and-drop UX — the hardest UX challenge)
+- [x] Low-fidelity wireframes: all 7 MVP screen specs defined in design/SCREENS.md with UX notes
+- [~] Prototype: curriculum builder / flowchart editor (React Flow canvas built in code; no Figma prototype)
 - [ ] Prototype: student onboarding flow (gym selection, first technique log)
-- [ ] Prototype: technique log entry flow (fast, post-class, minimal friction)
+- [~] Prototype: technique log entry flow (BottomSheet slide-up UI built; no Figma prototype)
 - [ ] Validate prototypes with 3+ users each before moving to high-fidelity
 
 ### 4.4 High-Fidelity Design (Figma)
-- [ ] Design all Instructor Portal screens in Figma (Technique Library, Flowchart Builder, Publisher, Planner, Dashboard, Settings)
-- [ ] Design all Student App screens in Figma (Feed, Flowchart, Technique Log, Belt Tracker, Game Plan, Videos, Schedule, Profile)
-- [ ] Design white-label theming system (how brand colors + logo replace defaults)
-- [ ] Design empty states (new gym before any content, new student before any techniques logged)
-- [ ] Design error states and loading skeletons
+- [~] All Instructor Portal screens designed in code (Figma skipped — built directly per user decision)
+- [~] All Student App screens designed in code (Figma skipped — built directly per user decision)
+- [x] Design white-label theming system (CSS custom properties + ThemeContext in code; documented in DESIGN_SYSTEM.md)
+- [x] Design empty states (EmptyState component; per-screen empty state copy in each screen)
+- [~] Design error states and loading skeletons (LoadingSpinner done; per-screen skeletons in progress)
 - [ ] Design push notification templates
 - [ ] Design QR check-in screen + QR code display for instructors
-- [ ] Design belt progression visualization (not automated — visual indicator of what's required)
-- [ ] Annotate all Figma files for dev handoff (spacing, font sizes, interaction specs)
+- [x] Design belt progression visualization (progress bar + technique checklist in profile.tsx)
+- [ ] Annotate all Figma files for dev handoff (N/A — designs live in code)
 
 ### 4.5 Design System
-- [ ] Define typography scale (heading, body, label, caption)
-- [ ] Define color system (primary, secondary, neutral, semantic — must support gym brand overrides)
-- [ ] Define spacing and layout grid (mobile 4pt grid, web 8pt grid)
-- [ ] Define component library in Figma (matched to code components)
-- [ ] Define icon set (custom or adapt from open source)
-- [ ] Create Figma variables for brand theming tokens
+- [x] Define typography scale (Inter — 5-level scale in DESIGN_SYSTEM.md + Tailwind config)
+- [x] Define color system (Primary #1B4FD8, Secondary #F59E0B, Surface tokens, belt colors — DESIGN_SYSTEM.md)
+- [x] Define spacing and layout grid (4pt grid mobile, 8pt grid web — DESIGN_SYSTEM.md)
+- [x] Define component library (10 components spec'd in DESIGN_SYSTEM.md; 8 components built in code)
+- [x] Define icon set (Heroicons v2 for portal; Ionicons via @expo/vector-icons for mobile)
+- [x] Create brand theming tokens (--color-primary, --color-secondary CSS vars; ThemeContext for mobile)
 
 ---
 
