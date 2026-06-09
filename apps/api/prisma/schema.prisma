@@ -1,0 +1,265 @@
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  owner
+  instructor
+  student
+  platform_admin
+}
+
+enum BeltLevel {
+  white
+  blue
+  purple
+  brown
+  black
+}
+
+enum TechniquePosition {
+  guard
+  half_guard
+  mount
+  back
+  side_control
+  turtle
+  standing
+  other
+}
+
+enum TechniqueType {
+  submission
+  sweep
+  escape
+  transition
+  takedown
+  other
+}
+
+enum SubscriptionTier {
+  starter
+  growth
+  pro
+  franchise
+}
+
+enum CheckInMethod {
+  manual
+  qr
+}
+
+model Gym {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  logoUrl          String?
+  primaryColor     String   @default("#1a1a2e")
+  secondaryColor   String   @default("#e94560")
+  stripeAccountId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  users         User[]
+  techniques    Technique[]
+  flowcharts    Flowchart[]
+  weeklyPosts   WeeklyPost[]
+  beltTracks    BeltTrack[]
+  classes       ClassSchedule[]
+  subscription  Subscription?
+
+  @@index([slug])
+}
+
+model User {
+  id               String    @id @default(cuid())
+  gymId            String
+  supabaseUid      String    @unique
+  email            String
+  name             String
+  role             Role      @default(student)
+  beltLevel        BeltLevel @default(white)
+  stripeCustomerId String?
+  firebaseToken    String?
+  isActive         Boolean   @default(true)
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  gym            Gym             @relation(fields: [gymId], references: [id])
+  flowchart      Flowchart?
+  techniqueLogs  TechniqueLog[]
+  attendance     Attendance[]
+  beltPromotions BeltPromotion[]
+
+  @@index([gymId])
+  @@index([gymId, isActive])
+  @@index([supabaseUid])
+}
+
+model Technique {
+  id            String            @id @default(cuid())
+  gymId         String?
+  title         String
+  description   String?
+  position      TechniquePosition
+  beltLevel     BeltLevel
+  type          TechniqueType
+  difficulty    Int               @default(1)
+  videoUrl      String?
+  muxAssetId    String?
+  muxPlaybackId String?
+  isTemplate    Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  gym           Gym?           @relation(fields: [gymId], references: [id])
+  techniqueLogs TechniqueLog[]
+
+  @@index([gymId])
+  @@index([gymId, beltLevel])
+  @@index([gymId, position])
+}
+
+model Flowchart {
+  id         String   @id @default(cuid())
+  userId     String?  @unique
+  gymId      String
+  title      String   @default("My Flowchart")
+  nodes      Json     @default("[]")
+  edges      Json     @default("[]")
+  isTemplate Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+  gym  Gym   @relation(fields: [gymId], references: [id])
+
+  @@index([gymId])
+  @@index([gymId, isTemplate])
+}
+
+model WeeklyPost {
+  id            String     @id @default(cuid())
+  gymId         String
+  instructorId  String
+  title         String
+  body          String?
+  videoUrl      String?
+  muxAssetId    String?
+  muxPlaybackId String?
+  techniqueIds  Json       @default("[]")
+  beltTarget    BeltLevel?
+  publishedAt   DateTime?
+  scheduledFor  DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  gym Gym @relation(fields: [gymId], references: [id])
+
+  @@index([gymId])
+  @@index([gymId, publishedAt])
+}
+
+model BeltTrack {
+  id                   String    @id @default(cuid())
+  gymId                String
+  beltLevel            BeltLevel
+  requiredTechniqueIds Json      @default("[]")
+  requiredClasses      Int       @default(0)
+  unlockCriteria       Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  gym Gym @relation(fields: [gymId], references: [id])
+
+  @@unique([gymId, beltLevel])
+  @@index([gymId])
+}
+
+model BeltPromotion {
+  id         String    @id @default(cuid())
+  userId     String
+  promotedBy String
+  fromBelt   BeltLevel
+  toBelt     BeltLevel
+  promotedAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ClassSchedule {
+  id           String   @id @default(cuid())
+  gymId        String
+  instructorId String
+  title        String
+  rrule        String?
+  startTime    DateTime
+  endTime      DateTime
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  gym        Gym          @relation(fields: [gymId], references: [id])
+  attendance Attendance[]
+
+  @@index([gymId])
+}
+
+model TechniqueLog {
+  id          String   @id @default(cuid())
+  userId      String
+  gymId       String
+  techniqueId String?
+  customTitle String?
+  notes       String?
+  drilled     Boolean  @default(false)
+  rolled      Boolean  @default(false)
+  loggedAt    DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id])
+  technique Technique? @relation(fields: [techniqueId], references: [id])
+
+  @@index([userId])
+  @@index([gymId])
+  @@index([userId, loggedAt])
+}
+
+model Attendance {
+  id            String        @id @default(cuid())
+  userId        String
+  gymId         String
+  classId       String
+  checkInMethod CheckInMethod @default(manual)
+  checkedInAt   DateTime      @default(now())
+
+  user  User          @relation(fields: [userId], references: [id])
+  class ClassSchedule @relation(fields: [classId], references: [id])
+
+  @@unique([userId, classId])
+  @@index([gymId])
+  @@index([userId])
+}
+
+model Subscription {
+  id                   String           @id @default(cuid())
+  gymId                String           @unique
+  tier                 SubscriptionTier @default(starter)
+  activeStudentCount   Int              @default(0)
+  stripeSubscriptionId String?
+  stripeCustomerId     String?
+  billingPeriodStart   DateTime?
+  billingPeriodEnd     DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  gym Gym @relation(fields: [gymId], references: [id])
+}
