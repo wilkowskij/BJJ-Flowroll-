@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { MagnifyingGlassIcon, PlayIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { PlusIcon } from '@heroicons/react/24/solid'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -171,15 +172,15 @@ export default function TechniqueLibrary() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-text-primary text-2xl font-bold">Technique Library</h1>
-          <p className="text-text-secondary text-sm mt-0.5">{techniques.length} techniques</p>
-        </div>
-        <Button onClick={openAdd} leftIcon={<PlusIcon className="h-4 w-4" />}>
-          Add Technique
-        </Button>
-      </div>
+      <PageHeader
+        title="Technique Library"
+        subtitle="Build and manage your curriculum"
+        actions={
+          <Button onClick={openAdd} leftIcon={<PlusIcon className="h-4 w-4" />}>
+            Add Technique
+          </Button>
+        }
+      />
 
       {/* Search + Filters */}
       <div className="flex flex-wrap gap-3 mb-6">

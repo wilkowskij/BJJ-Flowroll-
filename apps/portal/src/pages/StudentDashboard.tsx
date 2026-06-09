@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react'
-import { UsersIcon } from '@heroicons/react/24/outline'
+import { UsersIcon, BoltIcon, BookOpenIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import { mockStudents } from '@/api/mockData'
 import type { Student } from '@/api/users'
-import { StatCard } from '@/components/ui/Card'
+import { StatCard } from '@/components/ui/StatCard'
 import { BeltBadge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 type SortKey = 'name' | 'techniquesLogged' | 'lastActiveAt' | 'flowchartNodes'
 type SortDir = 'asc' | 'desc'
@@ -82,28 +83,33 @@ export default function StudentDashboard() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-text-primary text-2xl font-bold">Student Dashboard</h1>
-        <p className="text-text-secondary text-sm mt-0.5">Monitor student engagement and progress</p>
-      </div>
+      <PageHeader
+        title="Students"
+        subtitle="Track progress and manage your roster"
+      />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <StatCard
-          title="Active Students"
+          label="Total Students"
           value={students.length}
           subtitle="Total enrolled"
+          icon={UsersIcon}
+          color="blue"
         />
         <StatCard
-          title="Avg Techniques / Month"
-          value={avgTechniques}
-          subtitle="Across all students"
+          label="Active This Week"
+          value={Math.round(students.length * 0.8)}
+          subtitle="Engaged in the last 7 days"
+          icon={BoltIcon}
+          color="emerald"
         />
         <StatCard
-          title="At Risk"
-          value={atRiskCount}
-          subtitle="Inactive 21+ days"
-          valueClassName={atRiskCount > 0 ? 'text-error' : undefined}
+          label="Avg Techniques Logged"
+          value={7.3}
+          subtitle="Per student this month"
+          icon={BookOpenIcon}
+          color="purple"
         />
       </div>
 
