@@ -18,10 +18,14 @@ build/
 # Prisma
 prisma/migrations/dev.db
 prisma/dev.db
+prisma/generated/
 
 # Logs
 *.log
 npm-debug.log*
+
+# Test coverage
+coverage/
 
 # OS
 .DS_Store
