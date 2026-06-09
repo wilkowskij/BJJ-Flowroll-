@@ -6,6 +6,15 @@ import { UpdateBeltDto } from './dto/update-belt.dto';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findBySupabaseUid(supabaseUid: string, gymId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { supabaseUid, gymId, deletedAt: null },
+      include: { gym: { select: { name: true, primaryColor: true, secondaryColor: true, logoUrl: true } } },
+    });
+    if (!user) throw new NotFoundException(`User not found`);
+    return user;
+  }
+
   async findAll(gymId: string) {
     return this.prisma.user.findMany({
       where: { gymId, deletedAt: null },

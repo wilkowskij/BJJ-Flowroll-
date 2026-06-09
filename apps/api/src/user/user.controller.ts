@@ -23,6 +23,12 @@ export class UserController {
     return this.userService.findAll(user.gymId);
   }
 
+  @Get('me')
+  getMe(@Req() req: Request) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.userService.findBySupabaseUid(user.supabaseUid, user.gymId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: Request) {
     const user = (req as any).user as AuthenticatedUser;

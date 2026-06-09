@@ -81,15 +81,21 @@ export class VideoService {
       const muxPlaybackId = playbackIds?.[0]?.id;
 
       if (muxAssetId && muxPlaybackId) {
-        await this.prisma.technique.updateMany({
-          where: { muxAssetId },
-          data: {
-            muxPlaybackId,
-            videoUrl: `https://stream.mux.com/${muxPlaybackId}.m3u8`,
-          },
-        });
+        const playbackUrl = `https://stream.mux.com/${muxPlaybackId}.m3u8`;
+
+        const [techniques, posts] = await Promise.all([
+          this.prisma.technique.updateMany({
+            where: { muxAssetId },
+            data: { muxPlaybackId, videoUrl: playbackUrl },
+          }),
+          this.prisma.weeklyPost.updateMany({
+            where: { muxAssetId },
+            data: { muxPlaybackId, videoUrl: playbackUrl },
+          }),
+        ]);
+
         this.logger.log(
-          `Updated technique with muxAssetId=${muxAssetId}, playbackId=${muxPlaybackId}`,
+          `Mux asset ready — playbackId=${muxPlaybackId}: updated ${techniques.count} technique(s), ${posts.count} post(s)`,
         );
       }
     } else if (eventType === 'video.asset.errored') {
@@ -105,23 +111,45 @@ export class VideoService {
     s3Key: string,
     techniqueId: string,
   ): Promise<{ muxAssetId: string }> {
-    const bucket = this.config.get<string>('AWS_S3_BUCKET', 'flowmat-videos');
-    const region = this.config.get<string>('AWS_REGION', 'us-east-1');
-    const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
-
+    const s3Url = this.buildS3Url(s3Key);
     const asset = await this.mux.video.assets.create({
       input: [{ url: s3Url }],
       playback_policy: ['public'],
       meta: { gymId, techniqueId },
     });
 
-    // Store asset ID on technique while it processes asynchronously
     await this.prisma.technique.update({
       where: { id: techniqueId },
       data: { muxAssetId: asset.id },
     });
 
     return { muxAssetId: asset.id };
+  }
+
+  async createMuxUploadFromS3KeyForPost(
+    gymId: string,
+    s3Key: string,
+    weeklyPostId: string,
+  ): Promise<{ muxAssetId: string }> {
+    const s3Url = this.buildS3Url(s3Key);
+    const asset = await this.mux.video.assets.create({
+      input: [{ url: s3Url }],
+      playback_policy: ['public'],
+      meta: { gymId, weeklyPostId },
+    });
+
+    await this.prisma.weeklyPost.update({
+      where: { id: weeklyPostId },
+      data: { muxAssetId: asset.id },
+    });
+
+    return { muxAssetId: asset.id };
+  }
+
+  private buildS3Url(s3Key: string): string {
+    const bucket = this.config.get<string>('AWS_S3_BUCKET', 'flowmat-videos');
+    const region = this.config.get<string>('AWS_REGION', 'us-east-1');
+    return `https://${bucket}.s3.${region}.amazonaws.com/${s3Key}`;
   }
 
   async getGymStorageUsage(gymId: string): Promise<number> {

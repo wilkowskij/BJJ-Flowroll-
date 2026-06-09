@@ -55,19 +55,26 @@ export class VideoController {
     return this.videoService.handleMuxWebhook(body, signature);
   }
 
-  @Post(':techniqueId/process')
+  @Post('technique/:techniqueId/process')
   @UseGuards(AuthGuard)
-  processVideo(
+  processTechniqueVideo(
     @Param('techniqueId') techniqueId: string,
     @Body() body: ProcessVideoDto,
     @Req() req: Request,
   ) {
     const user = (req as any).user as AuthenticatedUser;
-    return this.videoService.createMuxUploadFromS3Key(
-      user.gymId,
-      body.s3Key,
-      techniqueId,
-    );
+    return this.videoService.createMuxUploadFromS3Key(user.gymId, body.s3Key, techniqueId);
+  }
+
+  @Post('weekly-post/:postId/process')
+  @UseGuards(AuthGuard)
+  processPostVideo(
+    @Param('postId') postId: string,
+    @Body() body: ProcessVideoDto,
+    @Req() req: Request,
+  ) {
+    const user = (req as any).user as AuthenticatedUser;
+    return this.videoService.createMuxUploadFromS3KeyForPost(user.gymId, body.s3Key, postId);
   }
 
   @Get('storage-usage')
