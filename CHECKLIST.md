@@ -237,9 +237,9 @@
 
 - [x] Set up React Native / Expo development environment (Expo SDK 51, NativeWind v4, Reanimated)
 - [ ] Configure Expo EAS Build for per-gym white-label builds
-- [ ] Implement push notification receipt and display (FCM on Android, APNs on iOS)
-- [ ] Implement deep link handling (technique notification → opens specific technique screen)
-- [ ] Implement camera access for QR code check-in
+- [x] Implement push notification receipt and display (setNotificationHandler for foreground alerts + tap handler routing 4 notification types)
+- [~] Implement deep link handling (flowmat:// scheme configured; 4 notification types routed; technique detail deep link pending a dedicated screen in v1.5)
+- [x] Implement camera access for QR code check-in (expo-camera with permission request + barcode scanning in checkin.tsx)
 - [ ] Implement camera/gallery access for video upload from mobile
 - [ ] Handle video upload progress UI (show upload %, handle large files gracefully)
 - [ ] Configure app icon + splash screen injection per gym at build time
