@@ -32,6 +32,9 @@ export function determineTier(studentCount: number): 'starter' | 'growth' | 'pro
   return 'pro';
 }
 
+/** Alias exported for unit testing — identical to determineTier. */
+export const getTierForStudentCount = determineTier;
+
 @Injectable()
 export class SubscriptionService {
   private readonly logger = new Logger(SubscriptionService.name);
