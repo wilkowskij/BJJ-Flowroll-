@@ -21,6 +21,9 @@ import { TechniqueRow } from '../../src/components/TechniqueRow';
 import { BottomSheet } from '../../src/components/BottomSheet';
 import { useTheme } from '../../src/context/ThemeContext';
 import { getTechniques, type Technique, type Position } from '../../src/api/techniques';
+import { Cache, CacheKeys } from '../../src/lib/cache';
+import { useAuthStore } from '../../src/store/authStore';
+import { useIsOnline } from '../../src/components/OfflineBanner';
 
 interface LoggedTechnique {
   id: string;
@@ -91,6 +94,8 @@ function techniqueToGym(t: Technique): GymTechnique {
 // ---------------------------------------------------------------------------
 export default function LogScreen() {
   const { primaryColor } = useTheme();
+  const { gymId } = useAuthStore();
+  const isOnline = useIsOnline();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [sheetView, setSheetView] = useState<SheetView>('search');
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,6 +109,36 @@ export default function LogScreen() {
   const toastOpacity = useRef(new RNAnimated.Value(0)).current;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load cached techniques on mount, then background-refresh
+  useEffect(() => {
+    const cacheKey = gymId ? CacheKeys.techniques(gymId) : null;
+    if (!cacheKey) return;
+
+    (async () => {
+      try {
+        // Show stale cache if offline
+        const cached = isOnline
+          ? await Cache.get<GymTechnique[]>(cacheKey)
+          : await Cache.getStale<GymTechnique[]>(cacheKey);
+        if (cached && cached.length > 0) {
+          // Pre-populate library with cached data (will be filtered on search)
+          setApiResults([]);
+        }
+      } catch (error) {
+        console.warn('[Log] Cache read failed:', error);
+      }
+
+      if (!isOnline) return;
+
+      try {
+        const { data } = await getTechniques({ gymId: gymId ?? undefined });
+        await Cache.set(cacheKey, data.map(techniqueToGym));
+      } catch (error) {
+        console.warn('[Log] Background technique refresh failed:', error);
+      }
+    })();
+  }, [gymId, isOnline]);
+
   // Debounced search: fire API call 300 ms after user stops typing
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -112,18 +147,35 @@ export default function LogScreen() {
         setApiResults([]);
         return;
       }
+
+      // Try cache first if offline
+      if (!isOnline && gymId) {
+        try {
+          const cached = await Cache.getStale<GymTechnique[]>(CacheKeys.techniques(gymId));
+          if (cached) {
+            const filtered = cached.filter((t) =>
+              t.name.toLowerCase().includes(searchQuery.toLowerCase()),
+            );
+            setApiResults(filtered);
+          }
+        } catch (error) {
+          console.warn('[Log] Offline search from cache failed:', error);
+        }
+        return;
+      }
+
       try {
         const { data } = await getTechniques({ query: searchQuery.trim() });
         setApiResults(data.map(techniqueToGym));
       } catch (error) {
-        console.warn('Technique search failed, using local filter', error);
+        console.warn('[Log] Technique search failed, using local filter', error);
         setApiResults([]);
       }
     }, 300);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchQuery]);
+  }, [searchQuery, gymId, isOnline]);
 
   const openSheet = () => {
     setSheetView('search');
