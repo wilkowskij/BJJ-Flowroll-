@@ -1,6 +1,7 @@
 import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
+  HomeIcon,
   BookOpenIcon,
   ShareIcon,
   NewspaperIcon,
@@ -24,6 +25,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { label: 'Dashboard', path: '/dashboard', icon: HomeIcon },
   { label: 'Library', path: '/library', icon: BookOpenIcon },
   { label: 'Flowchart Builder', path: '/flowchart', icon: ShareIcon },
   { label: 'Weekly Posts', path: '/posts', icon: NewspaperIcon },

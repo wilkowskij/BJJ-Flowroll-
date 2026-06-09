@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore'
 import { useGymStore } from './store/gymStore'
 import { AppShell } from './components/layout/AppShell'
 import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
 import TechniqueLibrary from './pages/TechniqueLibrary'
 import FlowchartBuilder from './pages/FlowchartBuilder'
 import WeeklyPosts from './pages/WeeklyPosts'
@@ -48,7 +49,8 @@ export default function App() {
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="/library" replace />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="library" element={<TechniqueLibrary />} />
           <Route path="flowchart" element={<FlowchartBuilder />} />
           <Route path="posts" element={<WeeklyPosts />} />
