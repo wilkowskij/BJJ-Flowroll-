@@ -1,0 +1,27 @@
+# Required GitHub Actions secrets:
+#   VERCEL_TOKEN       — Vercel personal access token (Settings → Tokens)
+#   VERCEL_ORG_ID      — Found in Vercel project settings (General → Team ID / Personal Account ID)
+#   VERCEL_PROJECT_ID  — Found in Vercel project settings (General → Project ID)
+
+name: Deploy Portal to Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Portal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: apps/portal
+          vercel-args: '--prod'

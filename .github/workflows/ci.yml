@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches:
+      - main
+      - 'claude/multi-agent-review-checklist-afk4ev'
+
+jobs:
+  lint-api:
+    name: Lint API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: apps/api/node_modules
+          key: api-node-modules-${{ hashFiles('apps/api/package-lock.json') }}
+          restore-keys: |
+            api-node-modules-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+  typecheck-portal:
+    name: Typecheck Portal
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: apps/portal/node_modules
+          key: portal-node-modules-${{ hashFiles('apps/portal/package-lock.json') }}
+          restore-keys: |
+            portal-node-modules-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint / typecheck
+        run: npm run lint
+
+  test-api:
+    name: Test API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: apps/api/node_modules
+          key: api-node-modules-${{ hashFiles('apps/api/package-lock.json') }}
+          restore-keys: |
+            api-node-modules-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --passWithNoTests
+
+  build-api:
+    name: Build API
+    runs-on: ubuntu-latest
+    needs: test-api
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: apps/api/node_modules
+          key: api-node-modules-${{ hashFiles('apps/api/package-lock.json') }}
+          restore-keys: |
+            api-node-modules-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  build-portal:
+    name: Build Portal
+    runs-on: ubuntu-latest
+    needs: typecheck-portal
+    defaults:
+      run:
+        working-directory: apps/portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: apps/portal/node_modules
+          key: portal-node-modules-${{ hashFiles('apps/portal/package-lock.json') }}
+          restore-keys: |
+            portal-node-modules-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
