@@ -130,15 +130,16 @@
 
 ### 1.9 Push Notifications (Firebase Cloud Messaging)
 - [ ] Set up Firebase project with Android + iOS configuration
-- [ ] Integrate FCM SDK into React Native app
-- [ ] Implement device token registration and storage per user
-- [ ] Build notification dispatch service in API (technique drops, announcements, belt promotions)
+- [ ] Integrate FCM SDK into React Native app (expo-notifications)
+- [x] Implement device token registration and storage per user (PUT /users/me/fcm-token)
+- [x] Build notification dispatch service in API (belt promotions, weekly post publish, announcements)
 - [ ] Implement notification preferences (students can opt out by type)
 - [ ] Test delivery on iOS (APNs) and Android (FCM direct)
 
 ### 1.10 Code Quality Standards
 - [ ] Define PR review checklist (security, test coverage, tenant isolation)
 - [ ] Enforce minimum 80% unit test coverage on business logic
+- [x] Configure ESLint + Prettier across monorepo (api, portal, mobile .eslintrc.js; root .prettierrc)
 - [ ] Set up automated code scanning (e.g., Snyk for dependency vulnerabilities)
 - [ ] Define performance budgets for API and mobile app
 - [ ] Conduct architecture review before each major phase ships
@@ -155,7 +156,7 @@
 - [ ] Template flowchart endpoints (list instructor templates, clone to user)
 - [x] Weekly post CRUD endpoints (weekly-post.controller.ts — create, publish, list, delete)
 - [x] Class planner endpoints (attendance.controller.ts — ClassSchedule CRUD)
-- [ ] Announcements endpoint (create, broadcast, list)
+- [x] Announcements endpoint (POST/GET/DELETE /api/v1/announcements — FCM broadcast on create)
 - [ ] Student dashboard data endpoint (technique counts, flowchart complexity, attendance, churn signals)
 - [ ] Instructor analytics endpoints (engagement rates, technique completion rates)
 
@@ -167,7 +168,8 @@
 - [ ] Game plan CRUD endpoints
 - [ ] Video library endpoint (list videos by position + belt, filtered by gym)
 - [ ] Class schedule endpoint (list upcoming classes)
-- [~] QR check-in endpoint (Attendance model exists; QR token validation logic not yet built)
+- [x] QR check-in endpoint (POST /attendance/qr-token, POST /attendance/qr-checkin, POST /attendance/manual)
+- [x] Class schedule endpoint (GET /attendance/schedule)
 
 ### 2.3 Backend — Gym / Admin API
 - [x] Gym onboarding endpoint (gym.controller.ts — create/update gym + branding config)
@@ -181,13 +183,13 @@
 - [x] App scaffolding: Vite + React Router v6, auth wrapper, gym_id context, CSS custom property brand theming
 - [x] Technique Library screen: list, search/filter, create/edit form, video preview — wired to real API
 - [x] Flowchart/Curriculum Builder screen: React Flow canvas, TechniqueNode with belt-color borders, save/load
-- [ ] Belt Track configuration screen: assign techniques to belt levels, set unlock requirements
+- [x] Belt Track configuration screen: BeltTracks.tsx — per-belt required classes + unlock criteria
 - [x] Weekly Publisher screen: create post, attach video, write notes, publish — wired to real API
-- [x] Class Planner screen: schedule view, class event management
+- [x] Class Planner screen: schedule view + QR code display per class (qrcode.react Modal)
 - [x] Student Dashboard screen: student table with technique count, belt level, churn risk indicators
-- [ ] Announcements screen: compose, send to all students
+- [x] Announcements screen: Announcements.tsx — compose + send to all students + history
 - [x] Gym settings screen: upload logo, set brand colors, configure custom URL
-- [ ] Billing screen: view tier, active student count, invoice history
+- [x] Billing screen: Billing.tsx — tier badge, active count, estimated bill, Stripe portal link
 
 ### 2.5 Student App (React Native)
 - [x] App scaffolding: Expo SDK 51, Expo Router v3, tab nav, auth context, ThemeContext for gym branding
@@ -196,9 +198,9 @@
 - [x] Technique Log screen: wired to GET /techniques + POST /technique-logs; BottomSheet search UI
 - [x] Belt Progression screen: wired to GET /belt-tracks/my-progress; progress bar, checklist
 - [ ] Game Plan Builder screen: drag techniques into go-to sequences by position
-- [ ] Video Library screen: browse by position + belt level, full-screen playback via Mux
-- [ ] Class Schedule screen: upcoming classes list
-- [ ] QR Check-In screen: camera QR code scanner
+- [x] Video Library screen: 2-col grid, Mux HLS playback (expo-av), position + belt filter chips
+- [x] Class Schedule screen: week strip, day filter, class cards, manual check-in button
+- [x] QR Check-In screen: expo-camera scanner, flowmat://checkin token validation, success/error overlay
 - [x] Profile screen: belt visualization, stats card, logout
 - [ ] Onboarding flow: gym selection (Phase 1), account creation, first technique walkthrough
 
