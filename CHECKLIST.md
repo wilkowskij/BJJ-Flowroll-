@@ -18,13 +18,13 @@
 ## 0. PRE-SPRINT DECISIONS — Must resolve before Sprint 1
 > Owner: Product Manager + Technical Lead
 
-- [ ] **Decision 1 — App delivery model:** Single FlowMat app with gym selection at login (Phase 1) vs. per-gym App Store app. *Recommended: single app for Phase 1, custom builds as paid Phase 2 upgrade.*
+- [x] **Decision 1 — App delivery model:** ✅ RESOLVED — Single FlowMat app, white-labeled at runtime (gym branding, colors, logo injected from config — no rebuild per gym). Per-gym App Store listings are a paid Phase 2 upgrade.
 - [ ] **Decision 2 — Video hosting in MVP:** Mux (native encoding + CDN) vs. YouTube/Vimeo embed. *Recommended: Mux from day one.*
 - [ ] **Decision 3 — Flowchart templates:** Ship 5–10 pre-built instructor templates at launch vs. blank canvas. *Recommended: ship templates to reduce onboarding friction.*
 - [ ] **Decision 4 — Belt promotion workflow:** Manual instructor-only vs. triggered by technique completions + class attendance. *Recommended: manual always — instructors are protective of this.*
 - [ ] **Decision 5 — Student social features:** Private flowcharts in v1.0 vs. optional sharing. *Recommended: private in v1.0, sharing toggle in v1.5.*
 - [ ] **Decision 6 — International scope:** US-only MVP vs. multi-currency/multi-language. *Recommended: US-only for MVP.*
-- [ ] **Decision 7 — "Active student" definition:** Logged a technique or attended class in last 30 days vs. any enrolled student. *(Drives billing accuracy.)*
+- [x] **Decision 7 — "Active student" definition:** ✅ RESOLVED — Active student = currently paying a gym membership (membership status in the gym's system, not activity-based). Gym admin marks students as active/inactive. Billing snapshot counts active-status students.
 - [ ] **Decision 8 — Proration policy:** Define mid-cycle tier change billing behavior.
 - [ ] **Decision 9 — Video storage overage pricing:** Define cost per GB above 10GB cap before launch.
 - [ ] **Decision 10 — White-label timeline SLA:** Define delivery target (business days) for per-gym App Store builds in Phase 2.
