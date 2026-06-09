@@ -12,7 +12,7 @@
 
 - [x] **[BLOCKING]** Create Supabase project → `https://zqaxzgcvnmglvliyyrsp.supabase.co` — URL + anon key in all `.env.example` files
 - [x] **[BLOCKING]** Deploy Auth Hook SQL — `public.custom_jwt_claims` function deployed via MCP ✅  ⚠️ Still need: Dashboard → Authentication → Hooks → set "Customize access token" → `public.custom_jwt_claims`
-- [ ] **[BLOCKING]** Run `cd apps/api && npx prisma migrate dev` to sync all tables to Supabase
+- [x] **[BLOCKING]** Schema applied to Supabase via MCP (13 tables + 6 enums + RLS policies). Still run `cd apps/api && npx prisma generate` locally to generate Prisma client types.
 - [ ] **[BLOCKING]** Fill in `apps/api/.env`: copy `.env.example`, add `SUPABASE_JWT_SECRET` from Dashboard → Settings → API → JWT Secret, add `DATABASE_URL` from Dashboard → Settings → Database → Connection string (Transaction pooler)
 - [ ] **[HIGH]** Create AWS account → S3 bucket `flowmat-videos` + IAM credentials
 - [ ] **[HIGH]** Create Mux account → get Token ID + Token Secret + Webhook Secret
@@ -73,7 +73,7 @@
 
 ### 1.2 Multi-Tenancy Architecture
 - [x] Design `gym_id` scoping strategy across all database tables (all 10 Prisma models have gymId FK)
-- [ ] Implement row-level security (RLS) in PostgreSQL for tenant isolation
+- [x] Implement row-level security (RLS) in PostgreSQL for tenant isolation — applied via Supabase MCP, inline JWT extraction (no auth schema functions needed)
 - [x] Define auth middleware that enforces gym_id on every API request (apps/api/src/auth/auth.guard.ts)
 - [ ] Design tenant-aware caching strategy in Redis (key namespacing by gym_id)
 - [ ] Document multi-tenancy model for all engineers before first sprint
@@ -103,7 +103,7 @@
 - [x] GraphQL deferred to v2.0 (Decision 12 — REST-only for v1.0)
 - [x] Set up request validation (ValidationPipe globally wired in main.ts — whitelist, forbidNonWhitelisted, transform)
 - [x] Implement global error handling and standardized error responses (GlobalExceptionFilter in main.ts)
-- [ ] Set up API rate limiting per gym_id
+- [x] Set up API rate limiting per gym_id — GymThrottlerGuard keys by gymId:path (falls back to IP)
 - [ ] Document API with OpenAPI/Swagger for dev handoff
 - [ ] Write integration tests for all core endpoints
 - [ ] Performance target: p95 API response < 200ms
@@ -134,7 +134,7 @@
 - [x] Configure Mux asset creation and CDN delivery URL generation (video.service.ts onAssetReady)
 - [x] Implement video storage tracking per gym (quota checked in video.service.ts — throws at 10GB)
 - [x] Build storage cap enforcement (getGymStorageUsage() gates presigned URL generation — unit tested)
-- [ ] Implement video deletion (removes from S3 + Mux + DB)
+- [x] Implement video deletion (removes from S3 + Mux + DB — DELETE /api/v1/video/technique/:techniqueId)
 - [ ] Test video upload from mobile (React Native) and desktop (browser)
 
 ### 1.8 White-Label Build Pipeline
@@ -153,7 +153,7 @@
 - [x] Integrate FCM SDK into React Native app (expo-notifications ~0.28.0 — registerForPushNotifications in notifications.ts, token PUT to API on login)
 - [x] Implement device token registration and storage per user (PUT /users/me/fcm-token)
 - [x] Build notification dispatch service in API (belt promotions, weekly post publish, announcements)
-- [ ] Implement notification preferences (students can opt out by type)
+- [x] Implement notification preferences (students can opt out by type — PUT /api/v1/users/me/notification-preferences)
 - [ ] Test delivery on iOS (APNs) and Android (FCM direct)
 
 ### 1.10 Code Quality Standards
@@ -173,11 +173,11 @@
 - [x] Technique CRUD endpoints (technique.controller.ts — full CRUD + gym-scoped list)
 - [x] Technique tagging endpoints (filter by position, belt_level, type via FilterTechniqueDto)
 - [x] Flowchart CRUD endpoints (flowchart.controller.ts — save/load nodes+edges JSON)
-- [ ] Template flowchart endpoints (list instructor templates, clone to user)
+- [x] Template flowchart endpoints (GET /flowcharts/templates + POST /flowcharts/:id/clone)
 - [x] Weekly post CRUD endpoints (weekly-post.controller.ts — create, publish, list, delete)
 - [x] Class planner endpoints (attendance.controller.ts — ClassSchedule CRUD)
 - [x] Announcements endpoint (POST/GET/DELETE /api/v1/announcements — FCM broadcast on create)
-- [ ] Student dashboard data endpoint (technique counts, flowchart complexity, attendance, churn signals)
+- [x] Student dashboard data endpoint (GET /users/students — technique counts, attendance, churn signals, flowchart node count)
 - [ ] Instructor analytics endpoints (engagement rates, technique completion rates)
 
 ### 2.2 Backend — Student API
@@ -185,8 +185,8 @@
 - [x] Personal flowchart endpoints (GET /flowcharts/me — returns user's gym flowchart)
 - [x] Curriculum feed endpoint (GET /weekly-posts/feed — paginated, published-only, gym-scoped)
 - [x] Belt progression data endpoint (GET /belt-tracks/my-progress — logged count, class count, % complete)
-- [ ] Game plan CRUD endpoints
-- [ ] Video library endpoint (list videos by position + belt, filtered by gym)
+- [x] Game plan CRUD endpoints (GET + PUT /api/v1/game-plan)
+- [x] Video library endpoint (GET /api/v1/techniques/videos — filtered by position + belt)
 - [ ] Class schedule endpoint (list upcoming classes)
 - [x] QR check-in endpoint (POST /attendance/qr-token, POST /attendance/qr-checkin, POST /attendance/manual)
 - [x] Class schedule endpoint (GET /attendance/schedule)
@@ -367,7 +367,7 @@
 - [ ] Define test cases for: instructor onboarding, technique creation, flowchart building, publishing, student log entry, belt progression, QR check-in, billing tier change
 - [ ] Define regression test suite (run before every release)
 - [ ] Set up automated end-to-end test framework (Playwright for web, Detox for React Native)
-- [x] Set up unit test framework (Jest + ts-jest — jest.config.js, specs for belt-track, subscription tier logic, video quota enforcement)
+- [x] Set up unit test framework (Jest + ts-jest — 55 tests across technique, flowchart, user, announcement, subscription, video services)
 
 ### 6.2 Core Flow Testing
 - [ ] Test: new gym signs up, sets branding, invites instructor, invites students
