@@ -66,7 +66,7 @@
 ### 1.1 Repo & Project Setup
 - [x] Initialize monorepo structure (Turborepo: apps/api, apps/portal, apps/mobile, packages/shared)
 - [x] Set up TypeScript across all packages
-- [ ] Configure ESLint, Prettier, Husky pre-commit hooks
+- [x] Configure ESLint, Prettier, Husky pre-commit hooks (eslint.config.js + .husky/pre-commit + lint-staged)
 - [x] Set up shared component library / design token package (packages/shared — shared types/enums)
 - [x] Create environment config management (apps/api/.env.example, apps/portal/.env.example)
 - [ ] Define branching strategy (main, develop, feature/*, hotfix/*)
@@ -124,7 +124,7 @@
 - [x] Design edge schema for connections (source, target, condition label)
 - [x] Implement save/load flowchart to/from PostgreSQL (flowchart.controller.ts + flowchart.service.ts)
 - [~] Implement real-time auto-save (FlowchartBuilder.tsx has debounced autosave; needs end-to-end test)
-- [ ] Implement undo/redo history
+- [x] Implement undo/redo history (history stack in FlowchartBuilder — Ctrl+Z/Y, 50-step limit)
 - [ ] Performance target: render 50-node flowchart in < 500ms
 
 ### 1.7 Video Pipeline (S3 + Mux)
@@ -178,7 +178,7 @@
 - [x] Class planner endpoints (attendance.controller.ts — ClassSchedule CRUD)
 - [x] Announcements endpoint (POST/GET/DELETE /api/v1/announcements — FCM broadcast on create)
 - [x] Student dashboard data endpoint (GET /users/students — technique counts, attendance, churn signals, flowchart node count)
-- [ ] Instructor analytics endpoints (engagement rates, technique completion rates)
+- [x] Instructor analytics endpoints (GET /api/v1/gyms/analytics — top techniques, active students 30d, position breakdown)
 
 ### 2.2 Backend — Student API
 - [x] Technique log endpoints (add technique to personal log, list, delete — technique-log module)
@@ -187,7 +187,7 @@
 - [x] Belt progression data endpoint (GET /belt-tracks/my-progress — logged count, class count, % complete)
 - [x] Game plan CRUD endpoints (GET + PUT /api/v1/game-plan)
 - [x] Video library endpoint (GET /api/v1/techniques/videos — filtered by position + belt)
-- [ ] Class schedule endpoint (list upcoming classes)
+- [x] Class schedule endpoint (list upcoming classes — GET /attendance/schedule ordered by startTime asc)
 - [x] QR check-in endpoint (POST /attendance/qr-token, POST /attendance/qr-checkin, POST /attendance/manual)
 - [x] Class schedule endpoint (GET /attendance/schedule)
 
@@ -197,7 +197,7 @@
 - [x] Belt promotion endpoint (user.service.ts promoteBelt — logs BeltPromotion record)
 - [x] BeltTrack configuration endpoint (belt-track.controller.ts — upsert per belt level)
 - [x] Active student count snapshot (billing-snapshot.cron.ts — monthly @Cron + Stripe update)
-- [ ] Platform admin endpoints (list all gyms, monitor health, manual overrides)
+- [x] Platform admin endpoints (GET /gyms/admin/gyms + GET /gyms/admin/health — platform_admin role only)
 
 ### 2.4 Instructor Portal (React.js)
 - [x] App scaffolding: Vite + React Router v6, auth wrapper, gym_id context, CSS custom property brand theming

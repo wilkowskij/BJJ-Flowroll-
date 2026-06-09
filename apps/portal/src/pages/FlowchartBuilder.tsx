@@ -3,21 +3,31 @@ import ReactFlow, {
   Background,
   Controls,
   MiniMap,
+  ReactFlowProvider,
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   BackgroundVariant,
   Handle,
   Position,
   type NodeProps,
   type Connection,
   type Node,
+  type Edge,
+  type NodeChange,
+  type EdgeChange,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { ArrowUturnLeftIcon, ArrowUturnRightIcon, ArrowsPointingInIcon } from '@heroicons/react/24/outline'
-import { mockTechniques } from '@/api/mockData'
+import {
+  ArrowUturnLeftIcon,
+  ArrowUturnRightIcon,
+  ArrowsPointingInIcon,
+} from '@heroicons/react/24/outline'
 import type { Technique } from '@/api/techniques'
+import { techniquesApi } from '@/api/techniques'
+import { flowchartsApi } from '@/api/flowcharts'
 import { BeltBadge, PositionChip } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -45,92 +55,200 @@ function TechniqueNode({ data }: NodeProps<TechniqueNodeData>) {
     >
       <Handle type="target" position={Position.Top} className="!bg-primary !border-0 !w-3 !h-3" />
       <div className="p-3">
-        <p className="font-semibold text-text-primary text-sm mb-1.5 leading-tight">{technique.title}</p>
+        <p className="font-semibold text-text-primary text-sm mb-1.5 leading-tight">
+          {technique.title}
+        </p>
         <div className="flex items-center gap-1.5 flex-wrap">
           <PositionChip position={technique.position} />
           <BeltBadge belt={technique.beltLevel} />
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-primary !border-0 !w-3 !h-3" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-primary !border-0 !w-3 !h-3"
+      />
     </div>
   )
 }
 
 const nodeTypes = { techniqueNode: TechniqueNode }
 
-// Initial mock flowchart data
-const initialNodes: Node[] = [
-  {
-    id: 'n1',
-    type: 'techniqueNode',
-    position: { x: 200, y: 50 },
-    data: { technique: mockTechniques[0] },
-  },
-  {
-    id: 'n2',
-    type: 'techniqueNode',
-    position: { x: 50, y: 200 },
-    data: { technique: mockTechniques[1] },
-  },
-  {
-    id: 'n3',
-    type: 'techniqueNode',
-    position: { x: 350, y: 200 },
-    data: { technique: mockTechniques[2] },
-  },
-  {
-    id: 'n4',
-    type: 'techniqueNode',
-    position: { x: 200, y: 350 },
-    data: { technique: mockTechniques[0] },
-  },
-]
+type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
-const initialEdges = [
-  { id: 'e1-2', source: 'n1', target: 'n2', animated: true, style: { stroke: '#1B4FD8' } },
-  { id: 'e1-3', source: 'n1', target: 'n3', animated: true, style: { stroke: '#1B4FD8' } },
-  { id: 'e2-4', source: 'n2', target: 'n4', style: { stroke: '#475569' } },
-]
+interface HistoryEntry {
+  nodes: Node[]
+  edges: Edge[]
+}
 
-type SaveStatus = 'saved' | 'saving' | 'unsaved'
+const MAX_HISTORY = 50
 
-export default function FlowchartBuilder() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+function FlowchartBuilderInner() {
+  const [nodes, setNodes, onNodesChange] = useNodesState([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [search, setSearch] = useState('')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
-  const [isLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [techniques, setTechniques] = useState<Technique[]>([])
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { fitView } = useReactFlow()
 
-  const filteredTechniques = mockTechniques.filter((t) =>
-    t.title.toLowerCase().includes(search.toLowerCase()),
+  // History for undo/redo
+  const historyRef = useRef<{ past: HistoryEntry[]; future: HistoryEntry[] }>({
+    past: [],
+    future: [],
+  })
+  const isRestoringRef = useRef(false)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+
+  const updateHistoryFlags = () => {
+    setCanUndo(historyRef.current.past.length > 0)
+    setCanRedo(historyRef.current.future.length > 0)
+  }
+
+  const pushHistory = useCallback((nodes: Node[], edges: Edge[]) => {
+    if (isRestoringRef.current) return
+    historyRef.current.past.push({ nodes, edges })
+    if (historyRef.current.past.length > MAX_HISTORY) {
+      historyRef.current.past.shift()
+    }
+    historyRef.current.future = []
+    updateHistoryFlags()
+  }, [])
+
+  // Load flowchart and techniques on mount
+  useEffect(() => {
+    let cancelled = false
+    setIsLoading(true)
+
+    Promise.all([flowchartsApi.getMyFlowchart(), techniquesApi.list()])
+      .then(([flowchart, techniqueList]) => {
+        if (cancelled) return
+        isRestoringRef.current = true
+        setNodes((flowchart.nodes as Node[]) ?? [])
+        setEdges((flowchart.edges as Edge[]) ?? [])
+        setTechniques(techniqueList)
+        setTimeout(() => {
+          isRestoringRef.current = false
+          fitView({ padding: 0.2 })
+        }, 50)
+      })
+      .catch(() => {
+        if (!cancelled) setTechniques([])
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const triggerAutosave = useCallback((currentNodes: Node[], currentEdges: Edge[]) => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    setSaveStatus('unsaved')
+    autosaveTimer.current = setTimeout(async () => {
+      setSaveStatus('saving')
+      try {
+        await flowchartsApi.saveMyFlowchart({ nodes: currentNodes, edges: currentEdges })
+        setSaveStatus('saved')
+      } catch {
+        setSaveStatus('error')
+      }
+    }, 2000)
+  }, [])
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      // Capture snapshot before the change
+      const prevSnapshot = { nodes: nodes.slice(), edges: edges.slice() }
+      onNodesChange(changes)
+      if (!isRestoringRef.current) {
+        pushHistory(prevSnapshot.nodes, prevSnapshot.edges)
+        setNodes((nds) => {
+          triggerAutosave(nds, edges)
+          return nds
+        })
+      }
+    },
+    [nodes, edges, onNodesChange, pushHistory, triggerAutosave, setNodes],
+  )
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      const prevSnapshot = { nodes: nodes.slice(), edges: edges.slice() }
+      onEdgesChange(changes)
+      if (!isRestoringRef.current) {
+        pushHistory(prevSnapshot.nodes, prevSnapshot.edges)
+        setEdges((eds) => {
+          triggerAutosave(nodes, eds)
+          return eds
+        })
+      }
+    },
+    [nodes, edges, onEdgesChange, pushHistory, triggerAutosave, setEdges],
   )
 
   const onConnect = useCallback(
-    (params: Connection) =>
-      setEdges((eds) => addEdge({ ...params, style: { stroke: '#1B4FD8' } }, eds)),
-    [setEdges],
-  )
-
-  const handleNodesChange = useCallback(
-    (changes: Parameters<typeof onNodesChange>[0]) => {
-      onNodesChange(changes)
-      setSaveStatus('unsaved')
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
-      autosaveTimer.current = setTimeout(() => {
-        setSaveStatus('saving')
-        setTimeout(() => setSaveStatus('saved'), 800)
-      }, 2000)
+    (params: Connection) => {
+      pushHistory(nodes, edges)
+      setEdges((eds) => {
+        const newEdges = addEdge({ ...params, style: { stroke: '#1B4FD8' } }, eds)
+        triggerAutosave(nodes, newEdges)
+        return newEdges
+      })
     },
-    [onNodesChange],
+    [nodes, edges, setEdges, pushHistory, triggerAutosave],
   )
 
-  const handleSave = () => {
-    setSaveStatus('saving')
-    // Simulate API call
-    setTimeout(() => setSaveStatus('saved'), 800)
-  }
+  const undo = useCallback(() => {
+    const entry = historyRef.current.past.pop()
+    if (!entry) return
+    historyRef.current.future.push({ nodes, edges })
+    isRestoringRef.current = true
+    setNodes(entry.nodes)
+    setEdges(entry.edges)
+    setTimeout(() => {
+      isRestoringRef.current = false
+      triggerAutosave(entry.nodes, entry.edges)
+    }, 0)
+    updateHistoryFlags()
+  }, [nodes, edges, setNodes, setEdges, triggerAutosave])
+
+  const redo = useCallback(() => {
+    const entry = historyRef.current.future.pop()
+    if (!entry) return
+    historyRef.current.past.push({ nodes, edges })
+    isRestoringRef.current = true
+    setNodes(entry.nodes)
+    setEdges(entry.edges)
+    setTimeout(() => {
+      isRestoringRef.current = false
+      triggerAutosave(entry.nodes, entry.edges)
+    }, 0)
+    updateHistoryFlags()
+  }, [nodes, edges, setNodes, setEdges, triggerAutosave])
+
+  // Keyboard shortcuts: Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (
+        ((e.ctrlKey || e.metaKey) && e.key === 'y') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')
+      ) {
+        e.preventDefault()
+        redo()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [undo, redo])
 
   const onDragStart = (event: React.DragEvent, technique: Technique) => {
     event.dataTransfer.setData('application/technique', JSON.stringify(technique))
@@ -153,16 +271,20 @@ export default function FlowchartBuilder() {
         y: event.clientY - bounds.top - 40,
       }
 
+      pushHistory(nodes, edges)
       const newNode: Node = {
         id: `n-${Date.now()}`,
         type: 'techniqueNode',
         position,
         data: { technique },
       }
-      setNodes((nds) => [...nds, newNode])
-      setSaveStatus('unsaved')
+      setNodes((nds) => {
+        const updated = [...nds, newNode]
+        triggerAutosave(updated, edges)
+        return updated
+      })
     },
-    [setNodes],
+    [nodes, edges, setNodes, pushHistory, triggerAutosave],
   )
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -170,11 +292,26 @@ export default function FlowchartBuilder() {
     event.dataTransfer.dropEffect = 'move'
   }, [])
 
+  const handleManualSave = async () => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    setSaveStatus('saving')
+    try {
+      await flowchartsApi.saveMyFlowchart({ nodes, edges })
+      setSaveStatus('saved')
+    } catch {
+      setSaveStatus('error')
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     }
   }, [])
+
+  const filteredTechniques = techniques.filter((t) =>
+    t.title.toLowerCase().includes(search.toLowerCase()),
+  )
 
   return (
     <div className="h-[calc(100vh-56px)] flex overflow-hidden">
@@ -194,22 +331,29 @@ export default function FlowchartBuilder() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {filteredTechniques.map((technique) => (
-            <div
-              key={technique.id}
-              draggable
-              onDragStart={(e) => onDragStart(e, technique)}
-              className="bg-surface-card rounded-lg p-3 cursor-grab active:cursor-grabbing border border-slate-700 hover:border-slate-500 transition-colors"
-            >
-              <p className="text-text-primary text-xs font-semibold mb-1.5">{technique.title}</p>
-              <div className="flex items-center gap-1 flex-wrap">
-                <PositionChip position={technique.position} />
-                <BeltBadge belt={technique.beltLevel} />
-              </div>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="md" />
             </div>
-          ))}
-          {filteredTechniques.length === 0 && (
-            <p className="text-text-muted text-xs text-center py-4">No techniques found</p>
+          ) : filteredTechniques.length === 0 ? (
+            <p className="text-text-muted text-xs text-center py-4">
+              {search ? 'No techniques found' : 'No techniques in your library yet'}
+            </p>
+          ) : (
+            filteredTechniques.map((technique) => (
+              <div
+                key={technique.id}
+                draggable
+                onDragStart={(e) => onDragStart(e, technique)}
+                className="bg-surface-card rounded-lg p-3 cursor-grab active:cursor-grabbing border border-slate-700 hover:border-slate-500 transition-colors"
+              >
+                <p className="text-text-primary text-xs font-semibold mb-1.5">{technique.title}</p>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <PositionChip position={technique.position} />
+                  <BeltBadge belt={technique.beltLevel} />
+                </div>
+              </div>
+            ))
           )}
         </div>
         <div className="p-3 border-t border-slate-700">
@@ -221,32 +365,59 @@ export default function FlowchartBuilder() {
       <div className="flex-1 flex flex-col relative">
         {/* Canvas toolbar */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-surface-elevated/95 backdrop-blur rounded-xl border border-slate-700 px-3 py-2 shadow-lg">
-          <Button size="sm" variant="ghost" title="Undo">
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Undo (Ctrl+Z)"
+            onClick={undo}
+            disabled={!canUndo}
+          >
             <ArrowUturnLeftIcon className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" title="Redo">
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Redo (Ctrl+Y)"
+            onClick={redo}
+            disabled={!canRedo}
+          >
             <ArrowUturnRightIcon className="h-4 w-4" />
           </Button>
           <div className="w-px h-5 bg-slate-700" />
-          <Button size="sm" variant="ghost" title="Fit View">
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Fit View"
+            onClick={() => fitView({ padding: 0.2, duration: 300 })}
+          >
             <ArrowsPointingInIcon className="h-4 w-4" />
           </Button>
           <div className="w-px h-5 bg-slate-700" />
-          <Button size="sm" onClick={handleSave} isLoading={saveStatus === 'saving'}>
+          <Button size="sm" onClick={handleManualSave} isLoading={saveStatus === 'saving'}>
             Save
           </Button>
         </div>
 
         {/* Autosave indicator */}
         <div className="absolute top-3 right-3 z-10">
-          <span className={`text-xs px-2 py-1 rounded-full ${
-            saveStatus === 'saved'
-              ? 'text-success bg-success/10'
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${
+              saveStatus === 'saved'
+                ? 'text-success bg-success/10'
+                : saveStatus === 'saving'
+                  ? 'text-text-muted bg-surface-elevated'
+                  : saveStatus === 'error'
+                    ? 'text-error bg-error/10'
+                    : 'text-warning bg-warning/10'
+            }`}
+          >
+            {saveStatus === 'saved'
+              ? 'Saved'
               : saveStatus === 'saving'
-              ? 'text-text-muted bg-surface-elevated'
-              : 'text-warning bg-warning/10'
-          }`}>
-            {saveStatus === 'saved' ? 'Saved' : saveStatus === 'saving' ? 'Saving...' : 'Unsaved'}
+                ? 'Saving...'
+                : saveStatus === 'error'
+                  ? 'Save failed'
+                  : 'Unsaved'}
           </span>
         </div>
 
@@ -261,7 +432,7 @@ export default function FlowchartBuilder() {
             nodes={nodes}
             edges={edges}
             onNodesChange={handleNodesChange}
-            onEdgesChange={onEdgesChange}
+            onEdgesChange={handleEdgesChange}
             onConnect={onConnect}
             onDrop={onDrop}
             onDragOver={onDragOver}
@@ -269,20 +440,20 @@ export default function FlowchartBuilder() {
             fitView
             className="bg-bg"
           >
-            <Background
-              color="#334155"
-              gap={24}
-              size={1.5}
-              variant={BackgroundVariant.Dots}
-            />
+            <Background color="#334155" gap={24} size={1.5} variant={BackgroundVariant.Dots} />
             <Controls className="!bg-surface-elevated !border-slate-700" />
-            <MiniMap
-              className="!bg-surface-elevated !border-slate-700"
-              nodeColor="#334155"
-            />
+            <MiniMap className="!bg-surface-elevated !border-slate-700" nodeColor="#334155" />
           </ReactFlow>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function FlowchartBuilder() {
+  return (
+    <ReactFlowProvider>
+      <FlowchartBuilderInner />
+    </ReactFlowProvider>
   )
 }

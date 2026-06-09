@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/co
 import { GymService } from './gym.service'
 import { AuthGuard } from '../auth/auth.guard'
 import { Roles } from '../auth/roles.decorator'
+import { GymContext } from '../auth/gym-context.decorator'
 import { CreateGymDto } from './dto/create-gym.dto'
 import { UpdateGymDto } from './dto/update-gym.dto'
 
@@ -13,6 +14,13 @@ export class GymController {
   @UseGuards(AuthGuard)
   create(@Body() dto: CreateGymDto) {
     return this.gymService.create(dto)
+  }
+
+  @Get('analytics')
+  @UseGuards(AuthGuard)
+  @Roles('instructor', 'owner', 'platform_admin')
+  getAnalytics(@GymContext() gymId: string) {
+    return this.gymService.getInstructorAnalytics(gymId)
   }
 
   @Get('admin/gyms')
