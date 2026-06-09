@@ -2,6 +2,7 @@ import React from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { ErrorBoundary } from '../ErrorBoundary'
 
 const pageTitles: Record<string, string> = {
   '/library': 'Technique Library',
@@ -22,7 +23,9 @@ export function AppShell() {
       <div className="flex flex-col flex-1 min-w-0">
         <TopBar title={title} />
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

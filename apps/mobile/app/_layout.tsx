@@ -9,6 +9,7 @@ import { ThemeProvider } from '../src/context/ThemeContext';
 import { AuthProvider } from '../src/context/AuthContext';
 import { useAuthStore } from '../src/store/authStore';
 import { OfflineBanner } from '../src/components/OfflineBanner';
+import { MobileErrorBoundary } from '../src/components/MobileErrorBoundary';
 import { registerForPushNotifications } from '../src/lib/notifications';
 import apiClient from '../src/api/client';
 
@@ -98,17 +99,19 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={gymConfig}>
         <AuthProvider value={authValue}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: '#0F172A' },
-            }}
-          >
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack>
-          <OfflineBanner />
+          <MobileErrorBoundary>
+            <StatusBar style="light" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: '#0F172A' },
+              }}
+            >
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            </Stack>
+            <OfflineBanner />
+          </MobileErrorBoundary>
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
