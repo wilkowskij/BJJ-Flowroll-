@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
-import { PlusIcon } from '@heroicons/react/24/solid'
+import { PlusIcon, QrCodeIcon } from '@heroicons/react/24/solid'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { QRCodeSVG } from 'qrcode.react'
 import { mockTechniques } from '@/api/mockData'
 import { Button } from '@/components/ui/Button'
 import { Input, Select } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { apiClient } from '@/api/client'
 
 const classSchema = z.object({
   title: z.string().min(2, 'Title is required'),
@@ -24,6 +26,15 @@ interface ClassBlock {
   endTime: string
   day: string
   techniqueIds: string[]
+}
+
+interface QrModalState {
+  isOpen: boolean
+  classId: string
+  className: string
+  qrValue: string | null
+  loading: boolean
+  error: string | null
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
@@ -65,11 +76,21 @@ function getClassesForSlot(classes: ClassBlock[], day: string, time: string) {
   )
 }
 
+const initialQrModalState: QrModalState = {
+  isOpen: false,
+  classId: '',
+  className: '',
+  qrValue: null,
+  loading: false,
+  error: null,
+}
+
 export default function ClassPlanner() {
   const [classes, setClasses] = useState<ClassBlock[]>(INITIAL_CLASSES)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<{ day: string; time: string } | null>(null)
   const [selectedTechniqueIds, setSelectedTechniqueIds] = useState<string[]>([])
+  const [qrModal, setQrModal] = useState<QrModalState>(initialQrModalState)
 
   const {
     register,
@@ -106,6 +127,41 @@ export default function ClassPlanner() {
     }
     setClasses((prev) => [...prev, newClass])
     setIsModalOpen(false)
+  }
+
+  const openQrModal = async (cls: ClassBlock) => {
+    setQrModal({
+      isOpen: true,
+      classId: cls.id,
+      className: cls.title,
+      qrValue: null,
+      loading: true,
+      error: null,
+    })
+
+    try {
+      const response = await apiClient.post<{ token: string; qrValue: string }>(
+        '/attendance/qr-token',
+        { classId: cls.id },
+      )
+      setQrModal((prev) => ({
+        ...prev,
+        qrValue: response.data.qrValue,
+        loading: false,
+      }))
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message || err?.message || 'Failed to generate QR code'
+      setQrModal((prev) => ({
+        ...prev,
+        loading: false,
+        error: errorMsg,
+      }))
+    }
+  }
+
+  const closeQrModal = () => {
+    setQrModal(initialQrModalState)
   }
 
   return (
@@ -160,7 +216,19 @@ export default function ClassPlanner() {
                       key={cls.id}
                       className="bg-primary/20 border border-primary/40 rounded text-xs p-1 mb-0.5 text-primary font-medium"
                     >
-                      <div className="truncate">{cls.title}</div>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="truncate">{cls.title}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openQrModal(cls)
+                          }}
+                          className="flex-shrink-0 text-primary/70 hover:text-primary transition-colors rounded p-0.5 hover:bg-primary/20"
+                          title="Show QR code"
+                        >
+                          <QrCodeIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                       <div className="text-primary/70 text-[10px]">
                         {cls.startTime}–{cls.endTime}
                       </div>
@@ -186,7 +254,7 @@ export default function ClassPlanner() {
         ))}
       </div>
 
-      {/* Modal */}
+      {/* Create Class Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -252,6 +320,54 @@ export default function ClassPlanner() {
             </div>
           </div>
         </form>
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal
+        isOpen={qrModal.isOpen}
+        onClose={closeQrModal}
+        title={`QR Code — ${qrModal.className}`}
+        size="sm"
+        footer={
+          <Button onClick={closeQrModal}>Close</Button>
+        }
+      >
+        <div className="flex flex-col items-center gap-4 py-2">
+          {qrModal.loading && (
+            <div className="flex flex-col items-center gap-2 py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+              <p className="text-text-secondary text-sm">Generating QR code…</p>
+            </div>
+          )}
+
+          {qrModal.error && (
+            <div className="text-center py-4">
+              <p className="text-red-400 text-sm">{qrModal.error}</p>
+              <Button
+                variant="ghost"
+                className="mt-3"
+                onClick={() => {
+                  const cls = classes.find((c) => c.id === qrModal.classId)
+                  if (cls) openQrModal(cls)
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {qrModal.qrValue && !qrModal.loading && (
+            <>
+              <div className="bg-white p-3 rounded-xl">
+                <QRCodeSVG value={qrModal.qrValue} size={256} />
+              </div>
+              <div className="text-center">
+                <p className="text-text-primary font-semibold">{qrModal.className}</p>
+                <p className="text-text-secondary text-sm mt-1">Valid for 4 hours</p>
+              </div>
+            </>
+          )}
+        </div>
       </Modal>
     </div>
   )

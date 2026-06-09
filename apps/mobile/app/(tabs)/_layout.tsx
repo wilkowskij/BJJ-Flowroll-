@@ -86,6 +86,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="checkin"
+        options={{
+          title: 'Check In',
+          tabBarIcon: ({ color, focused }: TabIconProps) => (
+            <Ionicons
+              name={(focused ? 'qr-code' : 'qr-code-outline') as IoniconName}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="videos"
         options={{
           title: 'Videos',
