@@ -21,11 +21,17 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { primaryColor, secondaryColor } = useGymStore()
+  const init = useAuthStore((s) => s.init)
 
   useEffect(() => {
     document.documentElement.style.setProperty('--color-primary', primaryColor)
     document.documentElement.style.setProperty('--color-secondary', secondaryColor)
   }, [primaryColor, secondaryColor])
+
+  useEffect(() => {
+    const cleanup = init()
+    return cleanup
+  }, [init])
 
   return (
     <BrowserRouter>
